@@ -459,6 +459,14 @@ footer{
 .promo-no-vigente{
   opacity:.45;pointer-events:none;filter:grayscale(.5);
 }
+/* ===== CONFIGURADOR ECOMMERCE ===== */
+.mcf-paso-label{font-family:"Playfair Display",serif;font-size:15px;font-weight:700;color:var(--tx);margin-bottom:2px;}
+.mcf-size-btn:hover,.mcf-size-btn.activo{border-color:var(--verde)!important;background:var(--verde-l)!important;}
+.mcf-size-btn.activo .mcf-size-label{color:var(--verde)!important;}
+.mcf-ml-color-btn.activo,.mcf-ml-grosor-btn.activo{border-color:var(--verde)!important;background:var(--verde-l)!important;color:var(--verde)!important;}
+.mcf-moldura-btn.activo{border-color:var(--verde)!important;box-shadow:0 0 0 2px var(--verde);}
+.co-pago-btn.activo{border-color:var(--verde)!important;background:var(--verde-l)!important;}
+#carrito-modal{transition:transform .3s;}
 </style>
 </head>
 <body>
@@ -473,7 +481,7 @@ footer{
         Crea tu Marco <i class="ti ti-chevron-down"></i>
       </button>
       <div class="nav-dropdown-menu">
-        <a href="#" onclick="irA('marco-con-foto')"><i class="ti ti-photo"></i> Marco con Foto</a>
+        <a href="#" onclick="abrirConfigurador()"><i class="ti ti-photo"></i> Marco con Foto</a>
         <a href="#" onclick="irA('promociones')"><i class="ti ti-tag"></i> Promociones</a>
       </div>
     </div>
@@ -482,6 +490,7 @@ footer{
     <a href="#contacto" onclick="navegarA('contacto')">Contacto</a>
     <a href="#" onclick="irAPromocionesInterno()" style="color:var(--oro);font-weight:700">🏷️ Promociones</a>
   </div>
+  <button onclick="abrirCarrito()" style="position:relative;background:none;border:none;cursor:pointer;color:var(--tx);font-size:22px;padding:4px 10px;margin-left:4px" title="Carrito"><i class="ti ti-shopping-cart"></i><span id="badge-count" style="display:none;position:absolute;top:-4px;right:2px;background:var(--verde);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center">0</span></button>
 
 
   <button class="nav-hamburger" onclick="toggleMenu()" aria-label="Menú">
@@ -579,7 +588,7 @@ footer{
   <h2 class="section-title">Crea tu Marco</h2>
   <p class="section-sub">Elige la opción que mejor se adapte a lo que necesitas y nosotros nos encargamos del resto.</p>
   <div class="ctm-grid">
-    <a class="ctm-card" href="#" onclick="irA('marco-con-foto')">
+    <a class="ctm-card" href="#" onclick="abrirConfigurador()">
       <div class="ctm-card-icon" style="font-size:22px;width:auto;padding:8px 12px;gap:6px;display:flex">📸 🖼️ 📐</div>
       <h3>Marco con Foto</h3>
       <p>Inserta tu imagen o foto y enmárcala a tu estilo. Trae tu foto o imagen a nuestras sucursales y la enmarcamos con el estilo que elijas.</p>
@@ -626,67 +635,14 @@ footer{
 </div>
 
 <!-- PÁGINAS INTERNAS -->
-<div id="pagina-marco-con-foto" class="pagina-interna">
-  <button class="btn-volver" onclick="volverInicio()"><i class="ti ti-arrow-left"></i> Volver</button>
-  <h2 style="font-family:Playfair Display,serif;font-size:clamp(28px,3vw,42px);margin-bottom:8px">Marco con Foto</h2>
-  <p style="color:var(--tx2);font-size:15px;margin-bottom:36px">Completa los siguientes campos y te contactaremos por WhatsApp para continuar con tu pedido.</p>
-
-  <div style="max-width:620px;display:flex;flex-direction:column;gap:32px">
-
-    <!-- PASO 1: Agregar foto -->
-    <div>
-      <div style="font-family:Playfair Display,serif;font-size:20px;font-weight:700;color:var(--tx);margin-bottom:14px">📸 1. Agrega tu foto</div>
-      <div id="mcf2-dropzone" onclick="document.getElementById('mcf2-input').click()" style="border:2.5px dashed var(--verde);border-radius:16px;padding:36px;text-align:center;cursor:pointer;background:var(--verde-l);transition:all .2s" onmouseover="this.style.background='#d4e8da'" onmouseout="this.style.background='var(--verde-l)'">
-        <div style="font-size:40px;margin-bottom:10px">🖼️</div>
-        <div style="font-size:14px;font-weight:600;color:var(--verde);margin-bottom:4px">Da clic para seleccionar tu foto</div>
-        <div style="font-size:12px;color:var(--tx2)">JPG, PNG — máx. 10MB</div>
-      </div>
-      <input type="file" id="mcf2-input" accept="image/*" style="display:none" onchange="mcf2CargarImg(this)">
-      <div id="mcf2-preview" style="display:none;margin-top:16px">
-        <img id="mcf2-img" style="max-width:100%;max-height:280px;border-radius:12px;border:3px solid var(--verde);display:block">
-        <div style="display:flex;gap:10px;margin-top:10px">
-          <button onclick="document.getElementById('mcf2-input').click()" style="background:none;border:1px solid var(--bd);color:var(--tx2);padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-family:Inter,sans-serif">Cambiar foto</button>
-          <button onclick="mcf2EliminarFoto()" style="background:none;border:1px solid #cc3333;color:#cc3333;padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-family:Inter,sans-serif">Eliminar foto</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PASO 2: Medida -->
-    <div>
-      <div style="font-family:Playfair Display,serif;font-size:20px;font-weight:700;color:var(--tx);margin-bottom:14px">📐 2. Agrega la medida</div>
-      <p style="font-size:13px;color:var(--tx2);margin-bottom:14px">Indica el ancho y alto de tu foto <strong>(en centímetros)</strong></p>
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px">Ancho (cm)</label>
-          <input type="number" id="mcf2-ancho" min="1" placeholder="ej. 30" style="padding:10px 16px;border:1.5px solid var(--bd);border-radius:10px;font-size:15px;font-family:DM Mono,monospace;width:120px" oninput="mcf2Actualizar()">
-        </div>
-        <div style="font-size:22px;color:var(--tx3);margin-top:18px">×</div>
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px">Alto (cm)</label>
-          <input type="number" id="mcf2-alto" min="1" placeholder="ej. 40" style="padding:10px 16px;border:1.5px solid var(--bd);border-radius:10px;font-size:15px;font-family:DM Mono,monospace;width:120px" oninput="mcf2Actualizar()">
-        </div>
-        <div style="font-size:13px;color:var(--tx2);margin-top:18px">cm</div>
-      </div>
-    </div>
-
-    <!-- PASO 3: Observaciones -->
-    <div>
-      <div style="font-family:Playfair Display,serif;font-size:20px;font-weight:700;color:var(--tx);margin-bottom:8px">📝 3. Observaciones y Comentarios</div>
-      <p style="font-size:13px;color:var(--tx2);margin-bottom:14px">Anota aquí cualquier detalle que tengas en mente. Ejemplo: María Luisa, Tipo de Marco, Acabado, Color, Ocasión especial, etc. Recuerda, estamos para apoyarte ante cualquier duda que tengas.<div style="margin-top:10px;padding:12px 16px;background:#fff;border-radius:10px;border:1px dashed var(--bd);font-size:13px;color:var(--tx2);line-height:1.6"><strong style="color:var(--tx)">Ejemplo:</strong> "Lo quiero con María Luisa de color beige, el cuadro sencillo color negro, es un título universitario..."</div></p>
-      <textarea id="mcf2-obs" placeholder="Escribe aquí tus observaciones y comentarios..." oninput="mcf2Actualizar()" style="width:100%;min-height:140px;padding:14px 16px;border:1.5px solid var(--bd);border-radius:12px;font-size:14px;font-family:Inter,sans-serif;color:var(--tx);resize:vertical;line-height:1.6;outline:none;transition:border .2s" onfocus="this.style.borderColor='var(--verde)'" onblur="this.style.borderColor='var(--bd)'"></textarea>
-    </div>
-
-    <!-- RESUMEN FINAL -->
-    <div id="mcf2-resumen" style="display:none;background:var(--verde-l);border:1.5px solid var(--verde);border-radius:16px;padding:28px">
-      <div style="font-family:Playfair Display,serif;font-size:18px;font-weight:700;color:var(--verde);margin-bottom:16px">✅ Resumen de tu pedido</div>
-      <div id="mcf2-resumen-txt" style="font-size:14px;color:var(--tx);line-height:2"></div>
-      <a id="mcf2-wa-btn" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:10px;margin-top:20px;background:#25D366;color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-size:15px;font-weight:700">
-        <i class="ti ti-brand-whatsapp" style="font-size:20px"></i> Enviar pedido por WhatsApp
-      </a>
-      <p style="font-size:12px;color:var(--tx2);margin-top:12px">Al dar clic se abrirá WhatsApp con los detalles de tu pedido. Nos pondremos en contacto contigo para continuar.</p>
-    </div>
-
-  </div>
+<div id="pagina-marco-con-foto" class="pagina-interna" style="padding:0;max-width:100%;height:100vh">
+  <iframe 
+    id="configurador-iframe"
+    src="configurador_enmarca.html" 
+    style="width:100%;height:calc(100vh - 0px);border:none;display:block"
+    allow="camera"
+    title="Configurador de marcos">
+  </iframe>
 </div>
 
 <div id="pagina-marco-sin-foto" class="pagina-interna">
@@ -841,7 +797,6 @@ footer{
     <div style="display:flex;gap:12px;margin-bottom:36px;flex-wrap:wrap">
       <button id="tab-temporada" onclick="mostrarTab('temporada')" style="padding:10px 28px;border-radius:50px;border:2px solid var(--verde);background:var(--verde);color:#fff;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">🗓️ De Temporada</button>
       <button id="tab-anio" onclick="mostrarTab('anio')" style="padding:10px 28px;border-radius:50px;border:2px solid var(--verde);background:transparent;color:var(--verde);font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">✨ Todo el Año</button>
-      <button id="tab-productos" onclick="mostrarTab('productos')" style="padding:10px 28px;border-radius:50px;border:2px solid var(--verde);background:transparent;color:var(--verde);font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">🎯 Productos</button>
     </div>
 
     <!-- TEMPORADA -->
@@ -1039,33 +994,6 @@ footer{
 
       </div>
     </div><!-- fin promo-anio -->
-
-    <!-- PRODUCTOS -->
-    <div id="promo-productos" style="display:none">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px">
-
-        <!-- ESPEJOS -->
-        <div class="promo-card" style="border-top:4px solid #90caf9">
-          <div class="promo-badge" style="background:#1565c0">🪞 Espejos</div>
-          <div class="promo-emoji">🪞</div>
-          <h3 class="promo-titulo">Espejos</h3>
-          <p class="promo-desc">Espejos decorativos con marcos elegantes para tu hogar, oficina o negocio. Diferentes tamaños, estilos y acabados disponibles.</p>
-          <div class="promo-fotos" id="fotos-espejos"></div>
-          <a href="https://wa.me/522711079327?text=Hola%2C%20me%20interesan%20los%20espejos%20decorativos" target="_blank" class="promo-btn">💬 Preguntar por WhatsApp</a>
-        </div>
-
-        <!-- CUADROS DECORATIVOS -->
-        <div class="promo-card" style="border-top:4px solid #a5d6a7">
-          <div class="promo-badge" style="background:#2A5C3F">🖼️ Productos</div>
-          <div class="promo-emoji">🖼️</div>
-          <h3 class="promo-titulo">Cuadros Decorativos</h3>
-          <p class="promo-desc">Cuadros decorativos disponibles a la venta. Posters, jerseys, imágenes y fotografías enmarcadas listas para decorar tus espacios.</p>
-          <div class="promo-fotos" id="fotos-cuadros-deco"></div>
-          <a href="https://wa.me/522711079327?text=Hola%2C%20me%20interesan%20los%20cuadros%20decorativos" target="_blank" class="promo-btn">💬 Preguntar por WhatsApp</a>
-        </div>
-
-      </div>
-    </div><!-- fin promo-productos -->
   </div>
 
 </div>
@@ -1669,16 +1597,15 @@ function navegarA(seccion){
 function mostrarTab(tab){
   document.getElementById('promo-temporada').style.display = tab==='temporada' ? 'block' : 'none';
   document.getElementById('promo-anio').style.display = tab==='anio' ? 'block' : 'none';
-  document.getElementById('promo-productos').style.display = tab==='productos' ? 'block' : 'none';
   var btnT = document.getElementById('tab-temporada');
   var btnA = document.getElementById('tab-anio');
-  var btnP = document.getElementById('tab-productos');
-  btnT.style.background='transparent'; btnT.style.color='var(--verde)';
-  btnA.style.background='transparent'; btnA.style.color='var(--verde)';
-  btnP.style.background='transparent'; btnP.style.color='var(--verde)';
-  if(tab==='temporada'){ btnT.style.background='var(--verde)'; btnT.style.color='#fff'; }
-  else if(tab==='anio'){ btnA.style.background='var(--verde)'; btnA.style.color='#fff'; }
-  else if(tab==='productos'){ btnP.style.background='var(--verde)'; btnP.style.color='#fff'; }
+  if(tab==='temporada'){
+    btnT.style.background='var(--verde)'; btnT.style.color='#fff';
+    btnA.style.background='transparent'; btnA.style.color='var(--verde)';
+  } else {
+    btnA.style.background='var(--verde)'; btnA.style.color='#fff';
+    btnT.style.background='transparent'; btnT.style.color='var(--verde)';
+  }
 }
 
 function iniciarPromociones(){
@@ -1717,6 +1644,10 @@ function iniciarPromociones(){
 // Llamar al inicializar la sección
 var _navOrigPromo = nav || function(){};
 
+function abrirConfigurador(){
+  irA('marco-con-foto');
+}
+
 function irAPromocionesInterno(){
   // Ocultar secciones principales
   ['hero','servicios','crea-tu-marco','nosotros','sucursales','contacto','promociones'].forEach(function(id){
@@ -1734,6 +1665,258 @@ function irAPromocionesInterno(){
   window.scrollTo({top:0,behavior:'smooth'});
   setTimeout(iniciarPromociones, 150);
 }
+
+// ===== CONFIGURADOR ECOMMERCE =====
+var mcfConfig = { foto:null, fotoNombre:'', tamano:'', tamanoLabel:'', mlColor:'', mlColorHex:'', mlGrosor:'', moldura:'', molduraGrad:'', precio:0 };
+var carritoItems = [];
+
+function mcfCargarFoto(input){
+  if(!input.files||!input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e){
+    mcfConfig.foto = e.target.result;
+    mcfConfig.fotoNombre = file.name;
+    // Buscar por querySelectorAll para asegurar que encontramos el elemento correcto
+    var imgs = document.querySelectorAll('#mcf-preview-img');
+    var drops = document.querySelectorAll('#mcf-drop-area');
+    var infos = document.querySelectorAll('#mcf-foto-info');
+    var btns = document.querySelectorAll('#mcf-btn-foto');
+    var nombres = document.querySelectorAll('#mcf-foto-nombre');
+    imgs.forEach(function(img){ img.src = e.target.result; img.style.cssText='display:block!important;width:240px;height:300px;object-fit:cover;border-radius:2px;vertical-align:bottom'; });
+    drops.forEach(function(drop){ drop.style.display='none'; });
+    infos.forEach(function(info){ info.style.cssText='display:flex!important'; });
+    btns.forEach(function(btn){ btn.style.display='none'; });
+    nombres.forEach(function(n){ n.textContent=file.name; });
+    mcfActualizar();
+  };
+  reader.readAsDataURL(file);
+}
+
+function mcfQuitarFoto(){
+  mcfConfig.foto = null;
+  var img=document.getElementById('mcf-preview-img'); if(img){img.src='';img.style.display='none';}
+  var drop=document.getElementById('mcf-drop-area'); if(drop){drop.style.display='flex';}
+  var info=document.getElementById('mcf-foto-info'); if(info){info.style.display='none';}
+  var btnFoto=document.getElementById('mcf-btn-foto'); if(btnFoto){btnFoto.style.display='flex';}
+  var input=document.getElementById('mcf-file-input'); if(input){input.value='';}
+  mcfActualizar();
+}
+
+function mcfElegirTamano(btn, val, label){
+  document.querySelectorAll('.mcf-size-btn').forEach(function(b){ b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  mcfConfig.tamano = val; mcfConfig.tamanoLabel = label;
+  // Ajustar preview según proporción
+  var parts = val.split('x');
+  var ratio = parseInt(parts[1])/parseInt(parts[0]);
+  var w = 200, h = Math.round(w*ratio);
+  ['mcf-preview-img','mcf-preview-img2','mcf-drop-area'].forEach(function(id){
+    var el=document.getElementById(id); if(el){el.style.width=w+'px';el.style.height=h+'px';}
+  });
+  mcfActualizar();
+}
+
+function mcfElegirMLColor(btn, nombre, hex, border){
+  document.querySelectorAll('.mcf-ml-color-btn').forEach(function(b){ b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  var mlWrap = document.getElementById('mcf-preview-ml');
+  var gWrap = document.getElementById('mcf-ml-grosor-wrap');
+  if(nombre==='Sin María Luisa'){
+    mcfConfig.mlColor=''; mcfConfig.mlColorHex='none';
+    if(mlWrap){ mlWrap.style.background='transparent'; mlWrap.style.padding='0'; mlWrap.style.border='none'; }
+    if(gWrap) gWrap.style.display='none';
+  } else {
+    mcfConfig.mlColor=nombre; mcfConfig.mlColorHex=hex;
+    if(mlWrap){ mlWrap.style.background=hex; mlWrap.style.padding='12px'; mlWrap.style.border='2px solid '+border; }
+    if(gWrap) gWrap.style.display='block';
+  }
+  mcfActualizar();
+}
+
+function mcfElegirMLGrosor(btn, label, px){
+  document.querySelectorAll('.mcf-ml-grosor-btn').forEach(function(b){ b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  mcfConfig.mlGrosor = label;
+  var mlEl = document.getElementById('mcf-preview-ml');
+  if(mlEl && mcfConfig.mlColorHex !== 'none') mlEl.style.padding = px+'px';
+  mcfActualizar();
+}
+
+function mcfElegirMoldura(btn, nombre, grad){
+  document.querySelectorAll('.mcf-moldura-btn').forEach(function(b){ b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  mcfConfig.moldura = nombre; mcfConfig.molduraGrad = grad;
+  document.getElementById('mcf-preview-frame').style.background = grad;
+  mcfActualizar();
+}
+
+function mcfActualizar(){
+  var listo = mcfConfig.foto && mcfConfig.tamano && mcfConfig.moldura;
+  var btn = document.getElementById('mcf-btn-carrito');
+  if(listo){
+    btn.style.opacity='1'; btn.style.pointerEvents='auto';
+    document.getElementById('mcf-resumen-precio').style.display='block';
+    var det = '';
+    det += '<div>📐 <strong>Tamaño:</strong> '+mcfConfig.tamanoLabel+'</div>';
+    if(mcfConfig.mlColor) det += '<div>🎨 <strong>María Luisa:</strong> '+mcfConfig.mlColor+(mcfConfig.mlGrosor?' · '+mcfConfig.mlGrosor:'')+'</div>';
+    det += '<div>🪵 <strong>Moldura:</strong> '+mcfConfig.moldura+'</div>';
+    document.getElementById('mcf-resumen-detalle').innerHTML = det;
+    document.getElementById('mcf-precio-total').textContent = 'Por definir';
+  } else {
+    btn.style.opacity='0.5'; btn.style.pointerEvents='none';
+    document.getElementById('mcf-resumen-precio').style.display='none';
+  }
+}
+
+function mcfAgregarCarrito(){
+  if(!mcfConfig.foto||!mcfConfig.tamano||!mcfConfig.moldura) return;
+  carritoItems.push({
+    id: Date.now(),
+    foto: mcfConfig.foto,
+    tamano: mcfConfig.tamanoLabel,
+    mlColor: mcfConfig.mlColor,
+    mlGrosor: mcfConfig.mlGrosor,
+    moldura: mcfConfig.moldura,
+    precio: mcfConfig.precio || 0
+  });
+  actualizarBadgeCarrito();
+  toast('¡Agregado al carrito!');
+  abrirCarrito();
+}
+
+function actualizarBadgeCarrito(){
+  var badge = document.getElementById('badge-count');
+  if(badge){ badge.textContent = carritoItems.length; badge.style.display = carritoItems.length>0?'flex':'none'; }
+}
+
+function abrirCarrito(){
+  document.getElementById('carrito-modal').style.display='block';
+  document.getElementById('carrito-overlay').style.display='block';
+  renderCarrito();
+}
+
+function cerrarCarrito(){
+  document.getElementById('carrito-modal').style.display='none';
+  document.getElementById('carrito-overlay').style.display='none';
+}
+
+function renderCarrito(){
+  var cont = document.getElementById('carrito-items');
+  var footer = document.getElementById('carrito-footer');
+  if(!carritoItems.length){
+    cont.innerHTML='<div style="text-align:center;padding:40px;color:var(--tx2)"><i class="ti ti-shopping-cart" style="font-size:40px;display:block;margin-bottom:12px"></i>Tu carrito está vacío</div>';
+    footer.style.display='none'; return;
+  }
+  var html='';
+  carritoItems.forEach(function(item){
+    html+='<div style="display:flex;gap:14px;padding:16px 0;border-bottom:1px solid #f0f0f0;align-items:flex-start">';
+    html+='<img src="'+item.foto+'" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0">';
+    html+='<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:4px">Marco personalizado</div>';
+    html+='<div style="font-size:12px;color:var(--tx2);line-height:1.7">'+item.tamano;
+    if(item.mlColor) html+=' · ML '+item.mlColor;
+    html+=' · '+item.moldura+'</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:var(--verde);margin-top:4px">Precio por definir</div></div>';
+    html+='<button onclick="eliminarItemCarrito('+item.id+')" style="background:none;border:none;color:#cc3333;cursor:pointer;padding:4px"><i class="ti ti-trash"></i></button>';
+    html+='</div>';
+  });
+  cont.innerHTML=html;
+  footer.style.display='block';
+  document.getElementById('carrito-total').textContent='Por definir';
+}
+
+function eliminarItemCarrito(id){
+  carritoItems=carritoItems.filter(function(i){return i.id!==id;});
+  actualizarBadgeCarrito();
+  renderCarrito();
+}
+
+function irACheckout(){
+  cerrarCarrito();
+  document.getElementById('checkout-modal').style.display='block';
+  checkoutPaso(1);
+}
+
+function cerrarCheckout(){
+  document.getElementById('checkout-modal').style.display='none';
+}
+
+function checkoutPaso(n){
+  [1,2,3].forEach(function(i){
+    document.getElementById('checkout-paso-'+i).style.display = i===n?'block':'none';
+    var ind = document.getElementById('step-ind-'+i);
+    if(ind){ ind.style.opacity = i<=n?'1':'0.5'; }
+  });
+  document.getElementById('checkout-confirmacion').style.display='none';
+  if(n===3) renderResumenFinal();
+}
+
+function renderResumenFinal(){
+  var html='<div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:8px">Resumen del pedido</div>';
+  carritoItems.forEach(function(item,i){
+    html+='<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">';
+    html+='<img src="'+item.foto+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px">';
+    html+='<div style="font-size:12px;color:var(--tx)">'+item.tamano+' · '+item.moldura+'</div></div>';
+  });
+  html+='<div style="border-top:1px solid #ddd;padding-top:10px;margin-top:8px;display:flex;justify-content:space-between"><strong>Total:</strong><strong style="color:var(--verde)">Por definir</strong></div>';
+  document.getElementById('co-resumen-final').innerHTML=html;
+}
+
+function coElegirPago(btn, tipo){
+  document.querySelectorAll('.co-pago-btn').forEach(function(b){b.classList.remove('activo');});
+  btn.classList.add('activo');
+  document.getElementById('co-tarjeta-form').style.display = tipo==='tarjeta'?'block':'none';
+  document.getElementById('co-transferencia-info').style.display = tipo==='transferencia'?'block':'none';
+}
+
+function formatCardNum(input){
+  var v=input.value.replace(/\D/g,'').substring(0,16);
+  input.value=v.replace(/(\d{4})/g,'$1 ').trim();
+}
+
+function formatExpiry(input){
+  var v=input.value.replace(/\D/g,'').substring(0,4);
+  if(v.length>=3) v=v.substring(0,2)+'/'+v.substring(2);
+  input.value=v;
+}
+
+function finalizarPedido(){
+  var nombre=document.getElementById('co-nombre').value.trim();
+  var email=document.getElementById('co-email').value.trim();
+  var tel=document.getElementById('co-tel').value.trim();
+  if(!nombre||!email||!tel){ toast('Completa tus datos personales primero'); checkoutPaso(1); return; }
+
+  // Guardar datos del cliente en localStorage
+  localStorage.setItem('be_cliente', JSON.stringify({nombre:nombre,email:email,tel:tel}));
+
+  // Mostrar confirmación
+  [1,2,3].forEach(function(i){ document.getElementById('checkout-paso-'+i).style.display='none'; });
+  document.getElementById('checkout-confirmacion').style.display='block';
+
+  // Armar mensaje WhatsApp
+  var msg='Hola, acabo de hacer un pedido en Beverido Enmarca:%0A';
+  msg+='Nombre: '+nombre+'%0ATel: '+tel+'%0AEmail: '+email+'%0A';
+  carritoItems.forEach(function(item,i){
+    msg+='%0APedido '+(i+1)+': '+item.tamano+' · '+item.moldura;
+    if(item.mlColor) msg+=' · ML '+item.mlColor;
+  });
+  document.getElementById('co-wa-confirm').href='https://wa.me/522711079327?text='+msg;
+
+  carritoItems=[];
+  actualizarBadgeCarrito();
+  toast('¡Pedido confirmado!');
+}
+
+// Cargar datos guardados del cliente
+(function(){
+  try{
+    var cl=JSON.parse(localStorage.getItem('be_cliente')||'{}');
+    if(cl.nombre) document.getElementById('co-nombre') && (document.getElementById('co-nombre').value=cl.nombre);
+    if(cl.email)  document.getElementById('co-email')  && (document.getElementById('co-email').value=cl.email);
+    if(cl.tel)    document.getElementById('co-tel')    && (document.getElementById('co-tel').value=cl.tel);
+  }catch(e){}
+})();
 </script>
+<input type="file" id="mcf-file-input" accept="image/*" style="position:fixed;left:-9999px;top:-9999px;opacity:0" onchange="mcfCargarFoto(this)">
 </body>
 </html>

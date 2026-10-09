@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enmarca tu Foto — Beverido Enmarca</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:#f8f7f4;min-height:100vh}
+:root{--verde:#2A5C3F;--verde-l:#e8f5ee;--tx:#1a1a1a;--tx2:#666;--bd:#e0e0e0}
+
+/* NAV */
+.nav{background:#fff;border-bottom:1px solid var(--bd);padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.nav-logo{height:48px;width:auto;cursor:pointer}
+.nav-title{font-family:"Playfair Display",serif;font-size:18px;font-weight:700;color:var(--tx)}
+.nav-back{display:flex;align-items:center;gap:6px;color:var(--tx2);font-size:14px;text-decoration:none;cursor:pointer;border:none;background:none;font-family:Inter,sans-serif}
+.nav-cart{margin-left:auto;position:relative;background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx);padding:4px 8px}
+.cart-badge{display:none;position:absolute;top:-4px;right:0;background:var(--verde);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center}
+
+/* LAYOUT */
+.configurador{display:flex;flex-wrap:wrap;min-height:calc(100vh - 72px)}
+.panel-preview{flex:1;min-width:300px;background:#f0ede8;display:flex;align-items:center;justify-content:center;padding:40px}
+.panel-config{flex:1;min-width:320px;max-width:500px;background:#fff;padding:32px 28px;overflow-y:auto}
+
+/* PREVIEW */
+.frame-exterior{display:inline-block;padding:16px;background:linear-gradient(135deg,#555,#999,#555);border-radius:3px;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:all .4s}
+.frame-ml{display:block;padding:0;background:transparent;transition:all .4s}
+.preview-drop{width:260px;height:320px;border:2.5px dashed #bbb;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:#fff;border-radius:2px;transition:border-color .2s}
+.preview-drop:hover{border-color:var(--verde)}
+.preview-drop i{font-size:42px;color:#ccc;margin-bottom:12px}
+.preview-drop p{font-size:12px;color:#bbb;text-align:center;padding:0 20px}
+#preview-img{display:none;width:260px;height:320px;object-fit:cover;border-radius:2px;vertical-align:bottom}
+
+/* CONFIG */
+.paso-label{font-family:"Playfair Display",serif;font-size:15px;font-weight:700;color:var(--tx);margin-bottom:10px;margin-top:22px}
+.paso-label:first-child{margin-top:0}
+
+/* Tamaños */
+.size-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.size-btn{padding:12px;border:1.5px solid var(--bd);border-radius:10px;background:#fff;cursor:pointer;text-align:left;transition:all .2s;font-family:Inter,sans-serif}
+.size-btn:hover,.size-btn.on{border-color:var(--verde);background:var(--verde-l)}
+.size-btn strong{display:block;font-size:14px;color:var(--tx)}
+.size-btn span{font-size:11px;color:var(--tx2)}
+
+/* ML colores */
+.ml-colors{display:flex;gap:8px;flex-wrap:wrap}
+.ml-color-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--bd);border-radius:20px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;transition:all .2s}
+.ml-color-btn:hover,.ml-color-btn.on{border-color:var(--verde);background:var(--verde-l)}
+.color-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid #ccc;display:inline-block;flex-shrink:0}
+
+/* Grosor ML */
+.grosor-wrap{margin-top:12px}
+.grosor-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.grosor-btn{padding:8px 16px;border:1.5px solid var(--bd);border-radius:20px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;transition:all .2s}
+.grosor-btn:hover,.grosor-btn.on{border-color:var(--verde);background:var(--verde-l);color:var(--verde);font-weight:600}
+
+/* Molduras */
+.moldura-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.moldura-btn{border:2px solid var(--bd);border-radius:10px;padding:8px;cursor:pointer;background:#fff;transition:all .2s;text-align:center}
+.moldura-btn:hover,.moldura-btn.on{border-color:var(--verde);box-shadow:0 0 0 2px var(--verde)}
+.moldura-color{width:100%;height:32px;border-radius:6px;margin-bottom:6px}
+.moldura-btn span{font-size:11px;font-family:Inter,sans-serif;color:var(--tx)}
+
+/* Resumen y botón */
+.resumen-box{background:var(--verde-l);border-radius:12px;padding:16px;margin-top:20px;display:none}
+.resumen-box .det{font-size:13px;color:var(--tx);line-height:2}
+.resumen-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;margin-top:10px;padding-top:10px}
+.resumen-total span{font-weight:700;font-size:15px}
+.resumen-total strong{font-size:20px;color:var(--verde)}
+.btn-carrito{width:100%;padding:16px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;transition:opacity .2s}
+.btn-carrito:disabled{opacity:.4;cursor:not-allowed}
+
+/* Foto info */
+.foto-info{display:none;align-items:center;gap:8px;font-size:13px;color:var(--verde);margin-top:8px}
+.btn-upload{display:flex;align-items:center;gap:8px;padding:10px 18px;border:1.5px solid var(--verde);background:#fff;color:var(--verde);border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:600;margin-top:10px;transition:all .2s}
+.btn-upload:hover{background:var(--verde-l)}
+
+/* CARRITO PANEL */
+.carrito-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
+.carrito-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:100%;max-width:400px;background:#fff;z-index:201;box-shadow:-4px 0 32px rgba(0,0,0,.15);overflow-y:auto;flex-direction:column}
+.carrito-header{padding:20px 24px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between}
+.carrito-items{padding:20px 24px;flex:1}
+.carrito-footer{padding:20px 24px;border-top:1px solid #eee}
+.btn-pagar{width:100%;padding:14px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif}
+.carrito-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #f5f5f5;align-items:flex-start}
+.carrito-item img{width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.ci-info{flex:1;font-size:12px;color:var(--tx);line-height:1.7}
+.ci-precio{font-size:13px;font-weight:700;color:var(--verde);margin-top:4px}
+.ci-del{background:none;border:none;color:#cc3333;cursor:pointer;font-size:16px;padding:4px}
+
+/* CHECKOUT */
+.checkout-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;overflow-y:auto;padding:20px}
+.checkout-box{background:#fff;border-radius:20px;max-width:520px;margin:0 auto}
+.checkout-header{background:var(--verde);padding:24px 28px;color:#fff;border-radius:20px 20px 0 0}
+.checkout-steps{display:flex;align-items:center;margin-top:20px;gap:0}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.step-line{flex:1;height:2px;background:rgba(255,255,255,.3)}
+.step-label{font-size:11px;margin-top:4px;font-weight:600}
+.checkout-body{padding:28px}
+.form-group{margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--tx2);display:block;margin-bottom:5px}
+.form-group input{width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;transition:border-color .2s}
+.form-group input:focus{outline:none;border-color:var(--verde)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-sig{width:100%;padding:14px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-top:16px}
+.btn-ant{flex:1;padding:14px;background:#f5f5f5;color:var(--tx);border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif}
+.btns-row{display:flex;gap:10px;margin-top:16px}
+.pago-opt{padding:14px 18px;border:1.5px solid var(--bd);border-radius:12px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;text-align:left;display:flex;align-items:center;gap:12px;width:100%;margin-bottom:10px;transition:all .2s}
+.pago-opt:hover,.pago-opt.on{border-color:var(--verde);background:var(--verde-l)}
+.pago-opt-title{font-weight:600;font-size:14px;color:var(--tx)}
+.pago-opt-sub{font-size:12px;color:var(--tx2)}
+.tarjeta-form{background:#f8f8f8;border-radius:12px;padding:16px;margin-bottom:14px;display:none}
+.transferencia-info{background:#f0f7f4;border:1.5px solid var(--verde);border-radius:12px;padding:16px;margin-bottom:14px;display:none;font-size:13px;color:var(--tx);line-height:2}
+.confirmacion{text-align:center;padding:20px 0;display:none}
+
+@media(max-width:640px){
+  .panel-preview{min-height:280px;padding:24px}
+  .panel-config{padding:20px 16px}
+  .preview-drop,.frame-ml img{width:200px!important;height:250px!important}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-back" onclick="window.history.back()"><i class="ti ti-arrow-left"></i> Volver</button>
+  <span class="nav-title">Enmarca tu Foto</span>
+  <button class="nav-cart" onclick="abrirCarrito()" title="Carrito">
+    <i class="ti ti-shopping-cart"></i>
+    <span class="cart-badge" id="cart-badge">0</span>
+  </button>
+</nav>
+
+<!-- CONFIGURADOR -->
+<div class="configurador">
+
+  <!-- Panel izquierdo: preview -->
+  <div class="panel-preview">
+    <div class="frame-exterior" id="frame-ext">
+      <div class="frame-ml" id="frame-ml">
+        <div class="preview-drop" id="preview-drop" onclick="document.getElementById('file-inp').click()">
+          <i class="ti ti-photo-plus"></i>
+          <p>Da clic para subir tu foto</p>
+        </div>
+        <img id="preview-img" src="" alt="Tu foto">
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho: opciones -->
+  <div class="panel-config">
+    <h2 style="font-family:'Playfair Display',serif;font-size:26px;color:var(--tx);margin-bottom:4px">Personaliza tu Marco</h2>
+    <p style="font-size:14px;color:var(--tx2);margin-bottom:20px">Configura cada detalle y recíbelo en tu domicilio.</p>
+
+    <!-- 1. Foto -->
+    <div class="paso-label">1. Tu foto</div>
+    <input type="file" id="file-inp" accept="image/*" style="position:absolute;left:-9999px">
+    <div class="foto-info" id="foto-info">
+      <i class="ti ti-circle-check"></i>
+      <span id="foto-nombre">foto.jpg</span>
+      <button onclick="quitarFoto()" style="background:none;border:none;color:#cc3333;cursor:pointer;font-size:12px;font-family:Inter,sans-serif">Quitar</button>
+    </div>
+    <button class="btn-upload" id="btn-upload" onclick="document.getElementById('file-inp').click()">
+      <i class="ti ti-upload"></i> Seleccionar foto
+    </button>
+
+    <!-- 2. Tamaño -->
+    <div class="paso-label">2. Tamaño</div>
+    <div class="size-grid">
+      <button class="size-btn" onclick="elegirTamano(this,'30x40','30 × 40 cm','Pequeño',260,320)"><strong>30 × 40 cm</strong><span>Pequeño</span></button>
+      <button class="size-btn" onclick="elegirTamano(this,'40x50','40 × 50 cm','Mediano',260,325)"><strong>40 × 50 cm</strong><span>Mediano</span></button>
+      <button class="size-btn" onclick="elegirTamano(this,'50x60','50 × 60 cm','Grande',260,312)"><strong>50 × 60 cm</strong><span>Grande</span></button>
+      <button class="size-btn" onclick="elegirTamano(this,'60x70','60 × 70 cm','Extra grande',260,303)"><strong>60 × 70 cm</strong><span>Extra grande</span></button>
+    </div>
+
+    <!-- 3. María Luisa -->
+    <div class="paso-label">3. María Luisa</div>
+    <div class="ml-colors">
+      <button class="ml-color-btn" onclick="elegirML(this,'Blanco','#fff','#ccc')"><span class="color-dot" style="background:#fff;border-color:#ccc"></span>Blanco</button>
+      <button class="ml-color-btn" onclick="elegirML(this,'Beige','#f5f0e8','#d4c5a9')"><span class="color-dot" style="background:#f5f0e8;border-color:#d4c5a9"></span>Beige</button>
+      <button class="ml-color-btn" onclick="elegirML(this,'Negro','#111','#111')"><span class="color-dot" style="background:#111;border-color:#111"></span>Negro</button>
+      <button class="ml-color-btn" onclick="elegirML(this,'Sin margen','none','none')">Sin margen</button>
+    </div>
+    <div class="grosor-wrap">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2)">Grosor:</div>
+      <div class="grosor-btns">
+        <button class="grosor-btn" onclick="elegirGrosor(this,'3 cm',10)">3 cm</button>
+        <button class="grosor-btn" onclick="elegirGrosor(this,'6 cm',20)">6 cm</button>
+        <button class="grosor-btn" onclick="elegirGrosor(this,'Sin grosor',0)">Sin grosor</button>
+      </div>
+    </div>
+
+    <!-- 4. Moldura -->
+    <div class="paso-label">4. Moldura</div>
+    <div class="moldura-grid">
+      <button class="moldura-btn" onclick="elegirMoldura(this,'Negro','linear-gradient(135deg,#1a1a1a,#444,#1a1a1a)')">
+        <div class="moldura-color" style="background:linear-gradient(135deg,#1a1a1a,#444,#1a1a1a)"></div><span>Negro</span>
+      </button>
+      <button class="moldura-btn" onclick="elegirMoldura(this,'Blanco','linear-gradient(135deg,#ddd,#fff,#ddd)')">
+        <div class="moldura-color" style="background:linear-gradient(135deg,#ddd,#fff,#ddd);border:1px solid #ccc"></div><span>Blanco</span>
+      </button>
+      <button class="moldura-btn" onclick="elegirMoldura(this,'Dorado','linear-gradient(135deg,#8B6914,#C9A84C,#8B6914)')">
+        <div class="moldura-color" style="background:linear-gradient(135deg,#8B6914,#C9A84C,#8B6914)"></div><span>Dorado</span>
+      </button>
+      <button class="moldura-btn" onclick="elegirMoldura(this,'Madera','linear-gradient(135deg,#6B3A2A,#A0522D,#6B3A2A)')">
+        <div class="moldura-color" style="background:linear-gradient(135deg,#6B3A2A,#A0522D,#6B3A2A)"></div><span>Madera</span>
+      </button>
+    </div>
+
+    <!-- Resumen -->
+    <div class="resumen-box" id="resumen-box">
+      <div class="det" id="resumen-det"></div>
+      <div class="resumen-total"><span>Total:</span><strong id="resumen-precio">Por definir</strong></div>
+    </div>
+    <button class="btn-carrito" id="btn-carrito" disabled onclick="agregarCarrito()">
+      <i class="ti ti-shopping-cart"></i> Agregar al carrito
+    </button>
+  </div>
+</div>
+
+<!-- CARRITO -->
+<div class="carrito-overlay" id="carrito-overlay" onclick="cerrarCarrito()"></div>
+<div class="carrito-panel" id="carrito-panel" style="display:none">
+  <div class="carrito-header">
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700">Tu Carrito</div>
+    <button onclick="cerrarCarrito()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#666"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="carrito-items" id="carrito-items"></div>
+  <div class="carrito-footer" id="carrito-footer" style="display:none">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <span style="font-weight:700;font-size:16px">Total:</span>
+      <strong style="font-size:20px;color:var(--verde)" id="carrito-total">Por definir</strong>
+    </div>
+    <button class="btn-pagar" onclick="irCheckout()">Proceder al pago</button>
+  </div>
+</div>
+
+<!-- CHECKOUT -->
+<div class="checkout-overlay" id="checkout-overlay">
+  <div class="checkout-box">
+    <div class="checkout-header">
+      <div style="font-size:22px;font-weight:700;font-family:'Playfair Display',serif">Finalizar Pedido</div>
+      <div class="checkout-steps">
+        <div style="text-align:center"><div class="step-circle" id="sc1" style="background:#fff;color:var(--verde)">1</div><div class="step-label">Datos</div></div>
+        <div class="step-line"></div>
+        <div style="text-align:center"><div class="step-circle" id="sc2" style="background:rgba(255,255,255,.3);color:#fff">2</div><div class="step-label">Envío</div></div>
+        <div class="step-line"></div>
+        <div style="text-align:center"><div class="step-circle" id="sc3" style="background:rgba(255,255,255,.3);color:#fff">3</div><div class="step-label">Pago</div></div>
+      </div>
+    </div>
+    <div class="checkout-body">
+
+      <!-- Paso 1 -->
+      <div id="cp1">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Tus datos</div>
+        <div class="form-group"><label>Nombre completo *</label><input type="text" id="co-nombre" placeholder="Tu nombre completo"></div>
+        <div class="form-group"><label>Correo electrónico *</label><input type="email" id="co-email" placeholder="tu@correo.com"></div>
+        <div class="form-group"><label>Teléfono *</label><input type="tel" id="co-tel" placeholder="10 dígitos" maxlength="10"></div>
+        <div style="background:#f8f8f8;border-radius:10px;padding:12px;font-size:12px;color:#666;display:flex;align-items:center;gap:6px"><i class="ti ti-lock" style="color:var(--verde)"></i>Tus datos se guardan para futuros pedidos en Beverido Enmarca.</div>
+        <button class="btn-sig" onclick="irPaso(2)">Continuar →</button>
+      </div>
+
+      <!-- Paso 2 -->
+      <div id="cp2" style="display:none">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Dirección de envío</div>
+        <div class="form-group"><label>Calle y número *</label><input type="text" id="co-calle" placeholder="Calle, número exterior e interior"></div>
+        <!-- Colonia: dropdown o texto -->
+        <div class="form-group" id="colonia-group">
+          <label>Colonia *</label>
+          <input type="text" id="co-colonia" placeholder="Escribe tu CP para ver colonias">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ciudad *</label>
+            <input type="text" id="co-ciudad" placeholder="Se llena con el CP">
+          </div>
+          <div class="form-group" style="position:relative">
+            <label>C.P. *</label>
+            <input type="text" id="co-cp" placeholder="Código postal" maxlength="5" oninput="buscarCP(this.value)">
+            <span id="cp-spinner" style="display:none;position:absolute;right:12px;bottom:14px;font-size:14px;color:#999">🔍</span>
+            <span id="cp-ok" style="display:none;position:absolute;right:12px;bottom:14px;color:var(--verde);font-size:16px">✓</span>
+          </div>
+        </div>
+        <div id="cp-error" style="display:none;font-size:12px;color:#cc3333;margin-top:-8px;margin-bottom:8px">CP no encontrado, verifica e intenta de nuevo.</div>
+        <div class="form-group"><label>Estado *</label><input type="text" id="co-estado" placeholder="Se llena con el CP"></div>
+        <div class="form-group"><label>Referencias (opcional)</label><input type="text" id="co-ref" placeholder="Entre calles, color de casa, etc."></div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="irPaso(1)">← Atrás</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" onclick="irPaso(3)">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div id="cp3" style="display:none">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Método de pago</div>
+        <div id="resumen-checkout" style="background:#f8f8f8;border-radius:12px;padding:14px;margin-bottom:18px;font-size:13px"></div>
+        <button class="pago-opt" onclick="elegirPago(this,'tarjeta')">
+          <i class="ti ti-credit-card" style="font-size:22px;color:var(--verde)"></i>
+          <div><div class="pago-opt-title">Tarjeta crédito / débito</div><div class="pago-opt-sub">Visa, Mastercard, AMEX</div></div>
+        </button>
+        <button class="pago-opt" onclick="elegirPago(this,'transferencia')">
+          <i class="ti ti-building-bank" style="font-size:22px;color:var(--verde)"></i>
+          <div><div class="pago-opt-title">Transferencia bancaria</div><div class="pago-opt-sub">SPEI / depósito</div></div>
+        </button>
+        <button class="pago-opt" onclick="elegirPago(this,'whatsapp')">
+          <i class="ti ti-brand-whatsapp" style="font-size:22px;color:#25D366"></i>
+          <div><div class="pago-opt-title">Coordinar por WhatsApp</div><div class="pago-opt-sub">Te contactamos para acordar el pago</div></div>
+        </button>
+        <div class="tarjeta-form" id="tarjeta-form">
+          <div style="font-size:13px;font-weight:600;color:#666;margin-bottom:12px;display:flex;align-items:center;gap:6px"><i class="ti ti-lock" style="color:var(--verde)"></i>Datos de tu tarjeta</div>
+          <div class="form-group"><label>Número de tarjeta</label><input type="text" id="card-num" placeholder="0000 0000 0000 0000" maxlength="19" oninput="fmtCard(this)"></div>
+          <div class="form-group"><label>Nombre en la tarjeta</label><input type="text" id="card-name" placeholder="Como aparece en la tarjeta"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Vencimiento</label><input type="text" id="card-exp" placeholder="MM/AA" maxlength="5" oninput="fmtExp(this)"></div>
+            <div class="form-group"><label>CVV</label><input type="password" id="card-cvv" placeholder="***" maxlength="4"></div>
+          </div>
+        </div>
+        <div class="transferencia-info" id="transf-info">
+          <strong>Datos para transferencia</strong><br>
+          Banco: Por definir<br>CLABE: Por definir<br>Beneficiario: Beverido Enmarca<br>
+          <span style="font-size:12px;color:#666">Envía tu comprobante por WhatsApp al 271 107 9327</span>
+        </div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="irPaso(2)">← Atrás</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" onclick="confirmarPedido()">Confirmar pedido ✓</button>
+        </div>
+      </div>
+
+      <!-- Confirmación -->
+      <div class="confirmacion" id="confirmacion">
+        <div style="font-size:60px;margin-bottom:16px">🎉</div>
+        <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--verde);margin-bottom:12px">¡Pedido recibido!</div>
+        <p style="font-size:14px;color:#666;line-height:1.8;margin-bottom:20px">Gracias por tu pedido. Nos pondremos en contacto contigo para confirmar los detalles y el tiempo de entrega.</p>
+        <a id="wa-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px">
+          <i class="ti ti-brand-whatsapp"></i> Confirmar por WhatsApp
+        </a>
+        <br><button onclick="cerrarCheckout()" style="background:none;border:none;color:#666;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;margin-top:16px">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var cfg = {foto:null,nombre:'',tamano:'',tamanoLabel:'',mlColor:'',mlGrosor:'',moldura:'',molduraGrad:''};
+var carrito = [];
+
+// ── FOTO ──
+document.getElementById('file-inp').addEventListener('change', function(){
+  var file = this.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    cfg.foto = e.target.result;
+    cfg.nombre = file.name;
+    var img = document.getElementById('preview-img');
+    var drop = document.getElementById('preview-drop');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    drop.style.display = 'none';
+    document.getElementById('foto-info').style.display = 'flex';
+    document.getElementById('btn-upload').style.display = 'none';
+    document.getElementById('foto-nombre').textContent = file.name;
+    actualizar();
+  };
+  reader.readAsDataURL(file);
+});
+
+function quitarFoto(){
+  cfg.foto = null;
+  var img = document.getElementById('preview-img');
+  var drop = document.getElementById('preview-drop');
+  img.src=''; img.style.display='none';
+  drop.style.display='flex';
+  document.getElementById('foto-info').style.display='none';
+  document.getElementById('btn-upload').style.display='flex';
+  document.getElementById('file-inp').value='';
+  actualizar();
+}
+
+// ── TAMAÑO ──
+function elegirTamano(btn,val,label,sub,w,h){
+  document.querySelectorAll('.size-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.tamano=val; cfg.tamanoLabel=label;
+  var img=document.getElementById('preview-img');
+  var drop=document.getElementById('preview-drop');
+  img.style.width=w+'px'; img.style.height=h+'px';
+  drop.style.width=w+'px'; drop.style.height=h+'px';
+  actualizar();
+}
+
+// ── MARÍA LUISA ──
+function elegirML(btn,nombre,hex,border){
+  document.querySelectorAll('.ml-color-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.mlColor = nombre==='Sin margen'?'':nombre;
+  var ml = document.getElementById('frame-ml');
+  if(nombre==='Sin margen'){
+    ml.style.padding='0'; ml.style.background='transparent'; ml.style.border='none';
+  } else {
+    ml.style.background=hex; ml.style.border='2px solid '+border;
+    // aplicar grosor actual si hay uno seleccionado
+    var gBtn = document.querySelector('.grosor-btn.on');
+    if(gBtn){ var px=parseInt(gBtn.getAttribute('data-px')||10); ml.style.padding=px+'px'; }
+    else { ml.style.padding='10px'; }
+  }
+  actualizar();
+}
+
+function elegirGrosor(btn,label,px){
+  document.querySelectorAll('.grosor-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  btn.setAttribute('data-px',px);
+  cfg.mlGrosor = label;
+  var ml=document.getElementById('frame-ml');
+  if(cfg.mlColor) ml.style.padding=px+'px';
+  actualizar();
+}
+
+// ── MOLDURA ──
+function elegirMoldura(btn,nombre,grad){
+  document.querySelectorAll('.moldura-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.moldura=nombre; cfg.molduraGrad=grad;
+  document.getElementById('frame-ext').style.background=grad;
+  actualizar();
+}
+
+// ── ACTUALIZAR ──
+function actualizar(){
+  var listo = cfg.foto && cfg.tamano && cfg.moldura;
+  var btn = document.getElementById('btn-carrito');
+  var box = document.getElementById('resumen-box');
+  btn.disabled = !listo;
+  if(listo){
+    box.style.display='block';
+    var det='';
+    det+='<div>📐 <strong>Tamaño:</strong> '+cfg.tamanoLabel+'</div>';
+    if(cfg.mlColor) det+='<div>🎨 <strong>María Luisa:</strong> '+cfg.mlColor+(cfg.mlGrosor?' · '+cfg.mlGrosor:'')+'</div>';
+    det+='<div>🪵 <strong>Moldura:</strong> '+cfg.moldura+'</div>';
+    document.getElementById('resumen-det').innerHTML=det;
+  } else { box.style.display='none'; }
+}
+
+// ── CARRITO ──
+function agregarCarrito(){
+  if(!cfg.foto||!cfg.tamano||!cfg.moldura) return;
+  carrito.push({id:Date.now(),foto:cfg.foto,tamano:cfg.tamanoLabel,ml:cfg.mlColor,grosor:cfg.mlGrosor,moldura:cfg.moldura});
+  actualizarBadge();
+  abrirCarrito();
+}
+
+function actualizarBadge(){
+  var b=document.getElementById('cart-badge');
+  b.textContent=carrito.length;
+  b.style.display=carrito.length?'flex':'none';
+}
+
+function abrirCarrito(){
+  document.getElementById('carrito-overlay').style.display='block';
+  document.getElementById('carrito-panel').style.display='flex';
+  renderCarrito();
+}
+
+function cerrarCarrito(){
+  document.getElementById('carrito-overlay').style.display='none';
+  document.getElementById('carrito-panel').style.display='none';
+}
+
+function renderCarrito(){
+  var cont=document.getElementById('carrito-items');
+  var footer=document.getElementById('carrito-footer');
+  if(!carrito.length){
+    cont.innerHTML='<div style="text-align:center;padding:40px;color:#999"><i class="ti ti-shopping-cart" style="font-size:40px;display:block;margin-bottom:12px"></i>Tu carrito está vacío</div>';
+    footer.style.display='none'; return;
+  }
+  var html='';
+  carrito.forEach(function(item){
+    html+='<div class="carrito-item"><img src="'+item.foto+'">';
+    html+='<div class="ci-info"><strong>Marco personalizado</strong><br>'+item.tamano;
+    if(item.ml) html+=' · ML '+item.ml;
+    html+=' · '+item.moldura;
+    html+='<div class="ci-precio">Precio por definir</div></div>';
+    html+='<button class="ci-del" onclick="eliminarItem('+item.id+')"><i class="ti ti-trash"></i></button></div>';
+  });
+  cont.innerHTML=html;
+  footer.style.display='block';
+}
+
+function eliminarItem(id){
+  carrito=carrito.filter(function(i){return i.id!==id;});
+  actualizarBadge(); renderCarrito();
+}
+
+function irCheckout(){
+  cerrarCarrito();
+  document.getElementById('checkout-overlay').style.display='block';
+  irPaso(1);
+  // Prellenar datos guardados
+  try{
+    var cl=JSON.parse(localStorage.getItem('be_cliente')||'{}');
+    if(cl.nombre) document.getElementById('co-nombre').value=cl.nombre;
+    if(cl.email)  document.getElementById('co-email').value=cl.email;
+    if(cl.tel)    document.getElementById('co-tel').value=cl.tel;
+  }catch(e){}
+}
+
+function cerrarCheckout(){
+  document.getElementById('checkout-overlay').style.display='none';
+  [1,2,3].forEach(function(i){document.getElementById('cp'+i).style.display=i===1?'block':'none';});
+  document.getElementById('confirmacion').style.display='none';
+}
+
+function irPaso(n){
+  [1,2,3].forEach(function(i){
+    document.getElementById('cp'+i).style.display=i===n?'block':'none';
+    var sc=document.getElementById('sc'+i);
+    sc.style.background=i<=n?'#fff':'rgba(255,255,255,.3)';
+    sc.style.color=i<=n?'var(--verde)':'#fff';
+  });
+  document.getElementById('confirmacion').style.display='none';
+  if(n===3){
+    var html='';
+    carrito.forEach(function(item,i){
+      html+='<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">';
+      html+='<img src="'+item.foto+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px">';
+      html+='<div style="font-size:12px">'+item.tamano+' · '+item.moldura+'</div></div>';
+    });
+    var ciudad = document.getElementById('co-ciudad') ? document.getElementById('co-ciudad').value : '';
+    var estado = document.getElementById('co-estado') ? document.getElementById('co-estado').value : '';
+    if(ciudad||estado) html+='<div style="font-size:12px;color:#666;margin-bottom:6px">📦 Envío a: '+ciudad+(estado?' · '+estado:'')+'</div>';
+    html+='<div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:10px;margin-top:8px;font-weight:700"><span>Total:</span><span style="color:var(--verde)">Por definir</span></div>';
+    document.getElementById('resumen-checkout').innerHTML=html;
+  }
+}
+
+function elegirPago(btn,tipo){
+  document.querySelectorAll('.pago-opt').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('tarjeta-form').style.display=tipo==='tarjeta'?'block':'none';
+  document.getElementById('transf-info').style.display=tipo==='transferencia'?'block':'none';
+}
+
+// ── AUTOCOMPLETADO CP MÉXICO ──
+var cpTimer = null;
+
+function buscarCP(val){
+  val = val.replace(/\D/g,'');
+  document.getElementById('co-cp').value = val;
+  document.getElementById('cp-ok').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'none';
+  document.getElementById('co-ciudad').value = '';
+  document.getElementById('co-estado').value = '';
+  var cg = document.getElementById('colonia-group');
+  if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu CP para ver colonias">';
+  if(val.length < 5){ document.getElementById('cp-spinner').style.display='none'; return; }
+  document.getElementById('cp-spinner').style.display = 'block';
+  clearTimeout(cpTimer);
+  cpTimer = setTimeout(function(){ buscarConSepomex(val); }, 600);
+}
+
+function buscarConSepomex(cp){
+  // Sepomex icalialabs — campos: D_mnpio = municipio/ciudad, d_estado = estado, d_asenta = colonia
+  fetch('https://sepomex.icalialabs.com/api/v1/zip_codes?zip_code=' + cp + '&per_page=100')
+    .then(function(r){ if(!r.ok) throw new Error('fail'); return r.json(); })
+    .then(function(data){
+      if(!data.zip_codes || !data.zip_codes.length){ mostrarCPError(); return; }
+      var zips = data.zip_codes;
+      // D_mnpio = nombre del municipio (ciudad), d_estado = estado
+      var ciudad = zips[0].D_mnpio || '';
+      var estado = zips[0].d_estado || '';
+      // Colonias únicas del campo d_asenta
+      var vis = {}, colonias = [];
+      zips.forEach(function(z){
+        var col = z.d_asenta || '';
+        if(col && !vis[col]){ vis[col]=1; colonias.push(col); }
+      });
+      colonias.sort();
+      aplicarCP(ciudad, estado, colonias);
+    })
+    .catch(function(){ mostrarCPError(); });
+}
+
+function aplicarCP(ciudad, estado, colonias){
+  document.getElementById('cp-spinner').style.display = 'none';
+  document.getElementById('co-ciudad').value = ciudad;
+  document.getElementById('co-estado').value = estado;
+  document.getElementById('cp-ok').style.display = 'block';
+  document.getElementById('cp-error').style.display = 'none';
+  mostrarColonias(colonias);
+}
+
+function mostrarColonias(colonias){
+  var cg = document.getElementById('colonia-group');
+  if(!cg) return;
+  if(!colonias || !colonias.length){
+    cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+    return;
+  }
+  var html = '<label>Colonia *</label>';
+  html += '<select id="co-colonia" style="width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:#fff;cursor:pointer">';
+  html += '<option value="">Selecciona tu colonia</option>';
+  colonias.forEach(function(col){
+    html += '<option value="' + col + '">' + col + '</option>';
+  });
+  html += '</select>';
+  cg.innerHTML = html;
+}
+
+function mostrarCPError(){
+  document.getElementById('cp-spinner').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'block';
+  document.getElementById('cp-ok').style.display = 'none';
+  document.getElementById('co-ciudad').value = '';
+  document.getElementById('co-estado').value = '';
+  var cg = document.getElementById('colonia-group');
+  if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia manualmente">';
+}
+
+
+function fmtCard(inp){ var v=inp.value.replace(/\D/g,'').substring(0,16); inp.value=v.replace(/(\d{4})/g,'$1 ').trim(); }
+function fmtExp(inp){ var v=inp.value.replace(/\D/g,'').substring(0,4); if(v.length>=3) v=v.substring(0,2)+'/'+v.substring(2); inp.value=v; }
+
+function confirmarPedido(){
+  var nombre=document.getElementById('co-nombre').value.trim();
+  var email=document.getElementById('co-email').value.trim();
+  var tel=document.getElementById('co-tel').value.trim();
+  if(!nombre||!email||!tel){ alert('Completa tus datos personales primero'); irPaso(1); return; }
+  localStorage.setItem('be_cliente',JSON.stringify({nombre:nombre,email:email,tel:tel}));
+  [1,2,3].forEach(function(i){document.getElementById('cp'+i).style.display='none';});
+  document.getElementById('confirmacion').style.display='block';
+  var msg='Hola, hice un pedido en Beverido Enmarca:%0ANombre: '+nombre+'%0ATel: '+tel+'%0AEmail: '+email+'%0A';
+  carrito.forEach(function(item,i){
+    msg+='%0APedido '+(i+1)+': '+item.tamano+' · '+item.moldura;
+    if(item.ml) msg+=' · ML '+item.ml;
+  });
+  document.getElementById('wa-link').href='https://wa.me/522711079327?text='+msg;
+  carrito=[]; actualizarBadge();
+}
+</script>
+</body>
+</html>
