@@ -52,7 +52,13 @@
 
   onAuthStateChanged(auth, function(user){
     window._usuarioActual = user || null;
+    window._firebaseListo = true;
     actualizarUIAuth(user);
+    // Mostrar modal de bienvenida si no hay sesión (solo la primera vez)
+    if(!user && !window._modalBienvenidaMostrado){
+      window._modalBienvenidaMostrado = true;
+      abrirLoginModal(false, true);
+    }
     if(user){
       // Prellenar datos del cliente si existen
       var nombre = user.displayName || '';
@@ -287,8 +293,8 @@ body{font-family:Inter,sans-serif;background:#f8f7f4;height:100vh;overflow:hidde
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
       Continuar con Google
     </button>
-    <button class="btn-social" onclick="loginFacebook()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/facebook.png" alt="Facebook">
+    <button class="btn-social" onclick="loginFacebook()" style="background:#1877F2;color:#fff;border-color:#1877F2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.235 2.686.235v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
       Continuar con Facebook
     </button>
 
@@ -669,12 +675,6 @@ function openNextStep(current){
 // Abrir el primer paso al cargar
 document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sc-foto').classList.add('open');
-  // Mostrar login al iniciar si no hay sesión (pequeño delay para que cargue Firebase)
-  setTimeout(function(){
-    if(!window._usuarioActual){
-      abrirLoginModal(false, true); // false = no requiere, true = es bienvenida
-    }
-  }, 800);
 });
 
 // ── FOTO ──
