@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enmarca tu Foto — Beverido Enmarca</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged, signInWithPopup, signOut,
+           GoogleAuthProvider, FacebookAuthProvider,
+           createUserWithEmailAndPassword, signInWithEmailAndPassword }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB8PSKUp7nL2mOsdFW7tWJbmpvk5b27md8",
+    authDomain: "beverido-4d80a.firebaseapp.com",
+    projectId: "beverido-4d80a",
+    storageBucket: "beverido-4d80a.firebasestorage.app",
+    messagingSenderId: "270167744198",
+    appId: "1:270167744198:web:9f0ada395fe102e02f41c7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+  const facebookProvider = new FacebookAuthProvider();
+  facebookProvider.addScope('email');
+
+  // Exponer funciones al scope global
+  window._fbAuth = auth;
+
+  window.loginGoogle = function(){
+    signInWithPopup(auth, googleProvider).catch(function(e){ mostrarErrorLogin(e); });
+  };
+  window.loginFacebook = function(){
+    signInWithPopup(auth, facebookProvider).catch(function(e){ mostrarErrorLogin(e); });
+  };
+  window.loginEmail = function(){
+    var email = document.getElementById('login-email-inp').value.trim();
+    var pass  = document.getElementById('login-pass-inp').value;
+    var esNuevo = document.getElementById('login-modo').dataset.modo === 'registro';
+    if(!email || !pass){ mostrarErrorLogin({message:'Ingresa correo y contraseña'}); return; }
+    var fn = esNuevo ? createUserWithEmailAndPassword : signInWithEmailAndPassword;
+    fn(auth, email, pass).catch(function(e){ mostrarErrorLogin(e); });
+  };
+  window.cerrarSesion = function(){
+    signOut(auth);
+  };
+
+  onAuthStateChanged(auth, function(user){
+    window._usuarioActual = user || null;
+    actualizarUIAuth(user);
+    if(user){
+      // Prellenar datos del cliente si existen
+      var nombre = user.displayName || '';
+      var email  = user.email || '';
+      var foto   = user.photoURL || '';
+      try {
+        var cl = JSON.parse(localStorage.getItem('be_cliente') || '{}');
+        if(!cl.nombre && nombre) cl.nombre = nombre;
+        if(!cl.email  && email)  cl.email  = email;
+        localStorage.setItem('be_cliente', JSON.stringify(cl));
+      } catch(e){}
+      // Cerrar modal login si estaba abierto
+      document.getElementById('login-modal').style.display = 'none';
+      // Si había un pedido pendiente, continuar
+      if(window._pendienteCheckout){
+        window._pendienteCheckout = false;
+        irCheckout();
+      }
+    }
+  });
+
+  function mostrarErrorLogin(e){
+    var msg = e.message || 'Error desconocido';
+    if(msg.includes('email-already-in-use')) msg = 'Este correo ya tiene cuenta. Inicia sesión.';
+    if(msg.includes('wrong-password') || msg.includes('invalid-credential')) msg = 'Contraseña incorrecta.';
+    if(msg.includes('user-not-found')) msg = 'No existe cuenta con ese correo.';
+    if(msg.includes('weak-password')) msg = 'La contraseña debe tener al menos 6 caracteres.';
+    if(msg.includes('popup-closed')) return; // usuario cerró el popup
+    var el = document.getElementById('login-error');
+    if(el){ el.textContent = msg; el.style.display = 'block'; }
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:#f8f7f4;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+:root{--verde:#2A5C3F;--verde-l:#e8f5ee;--tx:#1a1a1a;--tx2:#666;--bd:#e0e0e0}
+
+/* ── NAV ── */
+.nav{background:#fff;border-bottom:1px solid var(--bd);padding:12px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:100}
+.nav-title{font-family:"Playfair Display",serif;font-size:17px;font-weight:700;color:var(--tx);flex:1;text-align:center}
+.nav-back{display:flex;align-items:center;gap:4px;color:var(--tx2);font-size:13px;cursor:pointer;border:none;background:none;font-family:Inter,sans-serif;padding:4px 0}
+.nav-cart{position:relative;background:none;border:none;cursor:pointer;font-size:22px;color:var(--tx);padding:4px}
+.cart-badge{display:none;position:absolute;top:-4px;right:-2px;background:var(--verde);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center}
+
+/* ── MAIN SCROLL AREA ── */
+.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:88px}
+
+/* ── PREVIEW STRIP (top) ── */
+.preview-strip{background:#f0ede8;padding:16px;display:flex;align-items:center;justify-content:center;min-height:140px}
+.frame-mini-outer{display:inline-block;padding:10px;background:linear-gradient(135deg,#555,#999,#555);border-radius:3px;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:all .4s}
+.frame-mini-ml{display:block;padding:0;background:transparent;transition:all .4s}
+.preview-drop-mini{width:100px;height:130px;border:2px dashed #bbb;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:#fff;border-radius:2px;transition:border-color .2s}
+.preview-drop-mini i{font-size:26px;color:#ccc;margin-bottom:6px}
+.preview-drop-mini p{font-size:10px;color:#bbb;text-align:center;padding:0 8px;line-height:1.3}
+#preview-img{display:none;width:100px;height:130px;object-fit:cover;border-radius:2px;vertical-align:bottom}
+.preview-foto-info{font-size:11px;color:var(--verde);margin-left:14px;display:none;align-items:flex-start;flex-direction:column;gap:6px}
+.preview-foto-info span{font-weight:600}
+.btn-quitar-foto{background:none;border:1px solid #cc3333;color:#cc3333;border-radius:20px;font-size:11px;padding:3px 10px;cursor:pointer;font-family:Inter,sans-serif}
+
+/* ── STEP CARDS ── */
+.steps-list{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.step-card{background:#fff;border-radius:14px;border:1.5px solid var(--bd);overflow:hidden;transition:border-color .2s}
+.step-card.done{border-color:#b8dbc9}
+.step-card.open{border-color:var(--verde);box-shadow:0 2px 12px rgba(42,92,63,.1)}
+.step-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.step-num{width:28px;height:28px;border-radius:50%;background:#f0f0f0;color:#999;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.step-card.done .step-num{background:var(--verde);color:#fff}
+.step-card.open .step-num{background:var(--verde);color:#fff}
+.step-title{flex:1;font-size:14px;font-weight:600;color:var(--tx)}
+.step-sel{font-size:12px;color:var(--verde);font-weight:500;max-width:130px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step-arrow{font-size:16px;color:#bbb;margin-left:4px;transition:transform .2s}
+.step-card.open .step-arrow{transform:rotate(180deg)}
+.step-body{display:none;padding:4px 16px 16px;border-top:1px solid #f0f0f0}
+.step-card.open .step-body{display:block}
+
+/* ── FOTO STEP ── */
+.foto-upload-area{background:#f8f8f8;border:2px dashed #ccc;border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;margin-top:8px}
+.foto-upload-area:hover,.foto-upload-area:active{border-color:var(--verde);background:var(--verde-l)}
+.foto-upload-area i{font-size:32px;color:#bbb;display:block;margin-bottom:8px}
+.foto-upload-area p{font-size:13px;color:#999;line-height:1.5}
+.foto-elegida{display:none;align-items:center;gap:12px;margin-top:8px;background:#f0f8f4;border-radius:10px;padding:12px}
+.foto-elegida img{width:48px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.foto-elegida-info{flex:1;min-width:0}
+.foto-elegida-info strong{display:block;font-size:13px;color:var(--verde);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foto-elegida-info span{font-size:11px;color:#666}
+.btn-cambiar-foto{background:none;border:1px solid var(--verde);color:var(--verde);border-radius:20px;font-size:11px;padding:4px 12px;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;flex-shrink:0}
+
+/* ── TAMAÑO STEP ── */
+.size-grid-m{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.size-btn-m{padding:12px 10px;border:1.5px solid var(--bd);border-radius:12px;background:#fff;cursor:pointer;text-align:left;transition:all .2s;font-family:Inter,sans-serif}
+.size-btn-m:active,.size-btn-m.on{border-color:var(--verde);background:var(--verde-l)}
+.size-btn-m strong{display:block;font-size:13px;color:var(--tx);font-weight:700}
+.size-btn-m span{font-size:11px;color:var(--tx2)}
+
+/* ── ML STEP ── */
+.ml-list-m{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ml-btn-m{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--bd);border-radius:12px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;transition:all .2s;text-align:left}
+.ml-btn-m.on{border-color:var(--verde);background:var(--verde-l)}
+.color-circle{width:22px;height:22px;border-radius:50%;border:1.5px solid #ccc;display:inline-block;flex-shrink:0}
+.grosor-section{margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0}
+.grosor-label{font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px}
+.grosor-btns-m{display:flex;gap:8px;flex-wrap:wrap}
+.grosor-btn-m{padding:8px 16px;border:1.5px solid var(--bd);border-radius:20px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;transition:all .2s}
+.grosor-btn-m.on{border-color:var(--verde);background:var(--verde-l);color:var(--verde);font-weight:600}
+
+/* ── MOLDURA STEP ── */
+.moldura-list-m{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.moldura-btn-m{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--bd);border-radius:12px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;transition:all .2s}
+.moldura-btn-m.on{border-color:var(--verde);background:var(--verde-l)}
+.moldura-sample{width:34px;height:34px;border-radius:6px;flex-shrink:0}
+.moldura-info{flex:1;text-align:left}
+.moldura-info strong{display:block;font-size:13px;color:var(--tx)}
+.moldura-info span{font-size:11px;color:var(--tx2)}
+
+/* ── BOTTOM BAR ── */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);padding:12px 16px;z-index:50}
+.resumen-mini{font-size:11px;color:var(--tx2);margin-bottom:8px;min-height:14px;line-height:1.4}
+.btn-carrito-main{width:100%;padding:15px;background:var(--verde);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
+.btn-carrito-main:disabled{opacity:.38;cursor:not-allowed}
+
+/* ── CARRITO PANEL ── */
+.carrito-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
+.carrito-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:min(100%,420px);background:#fff;z-index:201;box-shadow:-4px 0 32px rgba(0,0,0,.15);overflow-y:auto;flex-direction:column}
+.carrito-header{padding:20px 20px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.carrito-items{padding:16px 20px;flex:1;overflow-y:auto}
+.carrito-footer{padding:16px 20px;border-top:1px solid #eee;flex-shrink:0}
+.btn-pagar{width:100%;padding:14px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif}
+.carrito-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f5f5f5;align-items:flex-start}
+.carrito-item img{width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.ci-info{flex:1;min-width:0;font-size:12px;color:var(--tx);line-height:1.7}
+.ci-info strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-desc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx2)}
+.ci-precio{font-size:13px;font-weight:700;color:var(--verde);margin-top:4px}
+.ci-del{background:none;border:none;color:#cc3333;cursor:pointer;font-size:16px;padding:4px}
+
+/* ── CHECKOUT ── */
+.checkout-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;overflow-y:auto;padding:24px 16px;box-sizing:border-box;display:none;align-items:flex-start;justify-content:center}
+.checkout-overlay.active{display:flex!important}
+.checkout-box{background:#fff;border-radius:20px;width:100%;max-width:520px;margin:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);flex-shrink:0}
+.checkout-header{background:var(--verde);padding:22px 28px 20px;color:#fff;border-radius:20px 20px 0 0;position:relative}
+.checkout-close-btn{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;transition:background .2s}
+.checkout-close-btn:hover{background:rgba(255,255,255,.3)}
+.checkout-steps{display:flex;align-items:flex-start;margin-top:18px;gap:0}
+.step-item{display:flex;flex-direction:column;align-items:center;min-width:56px}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.step-line{flex:1;height:2px;background:rgba(255,255,255,.3);margin-top:14px}
+.step-label{font-size:11px;margin-top:5px;font-weight:600;text-align:center;white-space:nowrap}
+.checkout-body{padding:28px 28px 24px}
+.form-group{margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--tx2);display:block;margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;transition:border-color .2s;background:#fff}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--verde)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-sig{width:100%;padding:14px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-top:16px}
+.btn-ant{flex:1;padding:14px;background:#f5f5f5;color:var(--tx);border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif}
+.btns-row{display:flex;gap:10px;margin-top:16px}
+.pago-opt{padding:14px 18px;border:1.5px solid var(--bd);border-radius:12px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;text-align:left;display:flex;align-items:center;gap:12px;width:100%;margin-bottom:10px;transition:all .2s}
+.pago-opt:hover,.pago-opt.on{border-color:var(--verde);background:var(--verde-l)}
+.pago-opt-title{font-weight:600;font-size:14px;color:var(--tx)}
+.pago-opt-sub{font-size:12px;color:var(--tx2)}
+.tarjeta-form{background:#f8f8f8;border-radius:12px;padding:16px;margin-bottom:14px;display:none}
+.transferencia-info{background:#f0f7f4;border:1.5px solid var(--verde);border-radius:12px;padding:16px;margin-bottom:14px;display:none;font-size:13px;color:var(--tx);line-height:2}
+.confirmacion{text-align:center;padding:20px 0;display:none}
+
+/* ── ENTREGA OPTS ── */
+.entrega-opt{padding:14px 10px;border:1.5px solid var(--bd);border-radius:14px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;color:var(--tx)}
+.entrega-opt:active,.entrega-opt.on{border-color:var(--verde);background:var(--verde-l)}
+.entrega-opt strong{font-size:13px;color:var(--tx)}
+.entrega-opt span{font-size:11px;color:var(--tx2)}
+/* ── SUCURSAL OPTS ── */
+.sucursal-opt{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid var(--bd);border-radius:14px;background:#fff;cursor:pointer;font-family:Inter,sans-serif;width:100%;transition:all .2s}
+.sucursal-opt:active,.sucursal-opt.on{border-color:var(--verde);background:var(--verde-l)}
+
+/* ── AUTH BANNER ── */
+.auth-banner{background:#fff;border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;gap:10px}
+.auth-banner-msg{color:var(--tx2);flex:1}
+.auth-banner-msg strong{color:var(--tx)}
+.btn-auth-login{background:var(--verde);color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap}
+.btn-auth-logout{background:none;border:1px solid var(--bd);color:var(--tx2);border-radius:20px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif}
+.auth-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+
+/* ── LOGIN MODAL ── */
+.login-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:center;justify-content:center;padding:20px}
+.login-modal-overlay.active{display:flex}
+.login-box{background:#fff;border-radius:20px;width:100%;max-width:400px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-title{font-family:"Playfair Display",serif;font-size:22px;color:var(--tx);margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--tx2);margin-bottom:24px;line-height:1.5}
+.btn-social{width:100%;padding:13px;border:1.5px solid var(--bd);border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:all .2s;color:var(--tx)}
+.btn-social:hover{border-color:#999;background:#fafafa}
+.btn-social img{width:20px;height:20px}
+.login-divider{text-align:center;color:#bbb;font-size:12px;margin:14px 0;position:relative}
+.login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#eee}
+.login-divider::before{left:0}.login-divider::after{right:0}
+.login-input{width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;margin-bottom:10px;transition:border-color .2s}
+.login-input:focus{outline:none;border-color:var(--verde)}
+.btn-login-email{width:100%;padding:13px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-top:4px}
+.login-toggle{text-align:center;font-size:12px;color:var(--tx2);margin-top:14px}
+.login-toggle span{color:var(--verde);cursor:pointer;font-weight:600}
+.login-error{display:none;background:#fff0f0;border:1px solid #ffcccc;color:#cc3333;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px}
+.login-skip{text-align:center;margin-top:16px}
+.login-skip button{background:none;border:none;color:var(--tx2);font-size:12px;cursor:pointer;font-family:Inter,sans-serif;text-decoration:underline}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-back" onclick="window.history.back()"><i class="ti ti-arrow-left"></i> Volver</button>
+  <span class="nav-title">Enmarca tu Foto</span>
+  <button class="nav-cart" onclick="abrirCarrito()" title="Carrito">
+    <i class="ti ti-shopping-cart"></i>
+    <span class="cart-badge" id="cart-badge">0</span>
+  </button>
+</nav>
+
+<!-- AUTH BANNER -->
+<div class="auth-banner" id="auth-banner" style="display:none">
+  <div class="auth-banner-msg" id="auth-banner-msg"></div>
+  <button class="btn-auth-login" id="auth-banner-btn" onclick="abrirLoginModal()">Iniciar sesión</button>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="login-modal-overlay" id="login-modal">
+  <div class="login-box">
+    <div class="login-title">Bienvenido 👋</div>
+    <div class="login-sub" id="login-sub">Inicia sesión para guardar tus datos y hacer pedidos más rápido.</div>
+    <div class="login-error" id="login-error"></div>
+
+    <!-- Botones sociales -->
+    <button class="btn-social" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Continuar con Google
+    </button>
+    <button class="btn-social" onclick="loginFacebook()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/facebook.png" alt="Facebook">
+      Continuar con Facebook
+    </button>
+
+    <div class="login-divider">o con correo</div>
+
+    <!-- Email / contraseña -->
+    <div id="login-modo" data-modo="login">
+      <input class="login-input" type="email" id="login-email-inp" placeholder="Correo electrónico">
+      <input class="login-input" type="password" id="login-pass-inp" placeholder="Contraseña (mín. 6 caracteres)">
+      <button class="btn-login-email" onclick="loginEmail()" id="login-email-btn">Iniciar sesión</button>
+      <div class="login-toggle">
+        ¿No tienes cuenta? <span onclick="toggleLoginModo()">Regístrate</span>
+      </div>
+    </div>
+
+    <div class="login-skip">
+      <button onclick="cerrarLoginModal()">Continuar sin cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main">
+
+  <!-- Preview strip -->
+  <div class="preview-strip" id="preview-strip">
+    <div class="frame-mini-outer" id="frame-ext">
+      <div class="frame-mini-ml" id="frame-ml">
+        <div class="preview-drop-mini" id="preview-drop" onclick="document.getElementById('file-inp').click()">
+          <i class="ti ti-photo-plus"></i>
+          <p>Toca para subir foto</p>
+        </div>
+        <img id="preview-img" src="" alt="Tu foto">
+      </div>
+    </div>
+    <div class="preview-foto-info" id="foto-info-strip">
+      <span id="foto-nombre-strip">foto.jpg</span>
+      <button class="btn-quitar-foto" onclick="quitarFoto()">Quitar foto</button>
+    </div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-list">
+
+    <!-- PASO 1: Foto -->
+    <div class="step-card" id="sc-foto">
+      <div class="step-header" onclick="toggleStep('foto')">
+        <div class="step-num">1</div>
+        <div class="step-title">Tu Foto</div>
+        <div class="step-sel" id="sel-foto">Elige...</div>
+        <i class="ti ti-chevron-down step-arrow"></i>
+      </div>
+      <div class="step-body">
+        <input type="file" id="file-inp" accept="image/*" style="position:absolute;left:-9999px">
+        <div class="foto-elegida" id="foto-elegida-box">
+          <img id="foto-thumb" src="" alt="">
+          <div class="foto-elegida-info">
+            <strong id="foto-nombre-card">foto.jpg</strong>
+            <span>Foto seleccionada ✓</span>
+          </div>
+          <button class="btn-cambiar-foto" onclick="document.getElementById('file-inp').click()">Cambiar</button>
+        </div>
+        <div class="foto-upload-area" id="foto-upload-area" onclick="document.getElementById('file-inp').click()">
+          <i class="ti ti-upload"></i>
+          <p>Toca aquí para subir<br>tu foto desde la galería</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 2: Tamaño -->
+    <div class="step-card" id="sc-tamano">
+      <div class="step-header" onclick="toggleStep('tamano')">
+        <div class="step-num">2</div>
+        <div class="step-title">Tamaño</div>
+        <div class="step-sel" id="sel-tamano">Elige...</div>
+        <i class="ti ti-chevron-down step-arrow"></i>
+      </div>
+      <div class="step-body">
+        <div class="size-grid-m">
+          <button class="size-btn-m" onclick="elegirTamano(this,'30x40','30 × 40 cm','Pequeño',100,130)"><strong>30 × 40 cm</strong><span>Pequeño</span></button>
+          <button class="size-btn-m" onclick="elegirTamano(this,'40x50','40 × 50 cm','Mediano',100,125)"><strong>40 × 50 cm</strong><span>Mediano</span></button>
+          <button class="size-btn-m" onclick="elegirTamano(this,'50x60','50 × 60 cm','Grande',100,120)"><strong>50 × 60 cm</strong><span>Grande</span></button>
+          <button class="size-btn-m" onclick="elegirTamano(this,'60x70','60 × 70 cm','Extra grande',100,117)"><strong>60 × 70 cm</strong><span>Extra grande</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 3: María Luisa -->
+    <div class="step-card" id="sc-ml">
+      <div class="step-header" onclick="toggleStep('ml')">
+        <div class="step-num">3</div>
+        <div class="step-title">María Luisa</div>
+        <div class="step-sel" id="sel-ml">Elige...</div>
+        <i class="ti ti-chevron-down step-arrow"></i>
+      </div>
+      <div class="step-body">
+        <div class="ml-list-m">
+          <button class="ml-btn-m" onclick="elegirML(this,'Blanco','#fff','#ccc')">
+            <span class="color-circle" style="background:#fff;border-color:#ccc"></span>
+            <div style="text-align:left"><strong style="display:block;font-size:13px;color:var(--tx)">Blanco</strong><span style="font-size:11px;color:var(--tx2)">Clásico y elegante</span></div>
+          </button>
+          <button class="ml-btn-m" onclick="elegirML(this,'Beige','#f5f0e8','#d4c5a9')">
+            <span class="color-circle" style="background:#f5f0e8;border-color:#d4c5a9"></span>
+            <div style="text-align:left"><strong style="display:block;font-size:13px;color:var(--tx)">Beige</strong><span style="font-size:11px;color:var(--tx2)">Calidez natural</span></div>
+          </button>
+          <button class="ml-btn-m" onclick="elegirML(this,'Negro','#111','#111')">
+            <span class="color-circle" style="background:#111;border-color:#111"></span>
+            <div style="text-align:left"><strong style="display:block;font-size:13px;color:var(--tx)">Negro</strong><span style="font-size:11px;color:var(--tx2)">Moderno y dramático</span></div>
+          </button>
+          <button class="ml-btn-m" onclick="elegirML(this,'Sin margen','none','none')">
+            <span class="color-circle" style="background:repeating-linear-gradient(45deg,#eee,#eee 3px,#fff 3px,#fff 6px);border-color:#ccc"></span>
+            <div style="text-align:left"><strong style="display:block;font-size:13px;color:var(--tx)">Sin margen</strong><span style="font-size:11px;color:var(--tx2)">Directo a la moldura</span></div>
+          </button>
+        </div>
+        <div class="grosor-section" id="grosor-section" style="display:none">
+          <div class="grosor-label">Grosor del margen:</div>
+          <div class="grosor-btns-m">
+            <button class="grosor-btn-m" onclick="elegirGrosor(this,'3 cm',4)">3 cm</button>
+            <button class="grosor-btn-m" onclick="elegirGrosor(this,'6 cm',8)">6 cm</button>
+            <button class="grosor-btn-m" onclick="elegirGrosor(this,'Sin grosor',0)">Sin grosor</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 4: Moldura -->
+    <div class="step-card" id="sc-moldura">
+      <div class="step-header" onclick="toggleStep('moldura')">
+        <div class="step-num">4</div>
+        <div class="step-title">Moldura</div>
+        <div class="step-sel" id="sel-moldura">Elige...</div>
+        <i class="ti ti-chevron-down step-arrow"></i>
+      </div>
+      <div class="step-body">
+        <div class="moldura-list-m">
+          <button class="moldura-btn-m" onclick="elegirMoldura(this,'Negro','linear-gradient(135deg,#1a1a1a,#444,#1a1a1a)')">
+            <div class="moldura-sample" style="background:linear-gradient(135deg,#1a1a1a,#444,#1a1a1a)"></div>
+            <div class="moldura-info"><strong>Negro</strong><span>Elegante y atemporal</span></div>
+          </button>
+          <button class="moldura-btn-m" onclick="elegirMoldura(this,'Blanco','linear-gradient(135deg,#ddd,#fff,#ddd)')">
+            <div class="moldura-sample" style="background:linear-gradient(135deg,#ddd,#fff,#ddd);border:1px solid #ccc"></div>
+            <div class="moldura-info"><strong>Blanco</strong><span>Limpio y minimalista</span></div>
+          </button>
+          <button class="moldura-btn-m" onclick="elegirMoldura(this,'Dorado','linear-gradient(135deg,#8B6914,#C9A84C,#8B6914)')">
+            <div class="moldura-sample" style="background:linear-gradient(135deg,#8B6914,#C9A84C,#8B6914)"></div>
+            <div class="moldura-info"><strong>Dorado</strong><span>Lujo y distinción</span></div>
+          </button>
+          <button class="moldura-btn-m" onclick="elegirMoldura(this,'Madera','linear-gradient(135deg,#6B3A2A,#A0522D,#6B3A2A)')">
+            <div class="moldura-sample" style="background:linear-gradient(135deg,#6B3A2A,#A0522D,#6B3A2A)"></div>
+            <div class="moldura-info"><strong>Madera</strong><span>Natural y cálida</span></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /steps-list -->
+</div><!-- /main -->
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="resumen-mini" id="resumen-mini"></div>
+  <button class="btn-carrito-main" id="btn-carrito" disabled onclick="agregarCarrito()">
+    <i class="ti ti-shopping-cart"></i> Agregar al carrito
+  </button>
+</div>
+
+<!-- CARRITO -->
+<div class="carrito-overlay" id="carrito-overlay" onclick="cerrarCarrito()"></div>
+<div class="carrito-panel" id="carrito-panel" style="display:none">
+  <div class="carrito-header">
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700">Tu Carrito</div>
+    <button onclick="cerrarCarrito()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#666"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="carrito-items" id="carrito-items"></div>
+  <div class="carrito-footer" id="carrito-footer" style="display:none">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <span style="font-weight:700;font-size:16px">Total:</span>
+      <strong style="font-size:20px;color:var(--verde)" id="carrito-total">Por definir</strong>
+    </div>
+    <button class="btn-pagar" onclick="irCheckout()">Proceder al pago</button>
+  </div>
+</div>
+
+<!-- CHECKOUT -->
+<div class="checkout-overlay" id="checkout-overlay">
+  <div class="checkout-box">
+    <div class="checkout-header">
+      <div style="font-size:21px;font-weight:700;font-family:'Playfair Display',serif">Finalizar Pedido</div>
+      <button class="checkout-close-btn" onclick="cerrarCheckout()" title="Cancelar y cerrar">✕</button>
+      <div class="checkout-steps">
+        <div class="step-item"><div class="step-circle" id="sc1" style="background:#fff;color:var(--verde)">1</div><div class="step-label">Datos</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle" id="sc2" style="background:rgba(255,255,255,.3);color:#fff">2</div><div class="step-label">Entrega</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle" id="sc3" style="background:rgba(255,255,255,.3);color:#fff">3</div><div class="step-label">Pago</div></div>
+      </div>
+    </div>
+    <div class="checkout-body">
+
+      <!-- Paso 1: Datos personales -->
+      <div id="cp1">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Tus datos</div>
+        <div class="form-group"><label>Nombre completo *</label><input type="text" id="co-nombre" placeholder="Tu nombre completo"></div>
+        <div class="form-group"><label>Correo electrónico *</label><input type="email" id="co-email" placeholder="tu@correo.com"></div>
+        <div class="form-group"><label>Teléfono (WhatsApp) *</label><input type="tel" id="co-tel" placeholder="10 dígitos" maxlength="10"></div>
+        <div style="background:#f8f8f8;border-radius:10px;padding:12px;font-size:12px;color:#666;display:flex;align-items:center;gap:6px"><i class="ti ti-lock" style="color:var(--verde)"></i>Tus datos se guardan de forma segura para futuros pedidos.</div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="cerrarCheckout()">✕ Cancelar</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" onclick="irPaso(2)">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- Paso 2: Entrega -->
+      <div id="cp2" style="display:none">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:14px">¿Cómo recibes tu pedido?</div>
+
+        <!-- Selector tipo entrega -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+          <button class="entrega-opt on" id="opt-envio" onclick="elegirEntrega('envio')">
+            <i class="ti ti-truck" style="font-size:22px;display:block;margin-bottom:6px"></i>
+            <strong>Envío a domicilio</strong>
+            <span>Lo recibas en casa</span>
+          </button>
+          <button class="entrega-opt" id="opt-sucursal" onclick="elegirEntrega('sucursal')">
+            <i class="ti ti-building-store" style="font-size:22px;display:block;margin-bottom:6px"></i>
+            <strong>Recoger en tienda</strong>
+            <span>Sin costo extra</span>
+          </button>
+        </div>
+
+        <!-- Sección envío a domicilio -->
+        <div id="seccion-envio">
+          <div style="background:#fff8e6;border:1px solid #f0d080;border-radius:10px;padding:10px 14px;font-size:12px;color:#8a6000;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <i class="ti ti-clock" style="font-size:16px"></i>
+            Tiempo de entrega estimado: <strong>10–15 días hábiles</strong>
+          </div>
+          <div class="form-group"><label>Calle y número *</label><input type="text" id="co-calle" placeholder="Calle, número exterior e interior"></div>
+          <div class="form-group" id="colonia-group">
+            <label>Colonia *</label>
+            <input type="text" id="co-colonia" placeholder="Escribe tu CP para ver colonias">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ciudad *</label>
+              <input type="text" id="co-ciudad" placeholder="Se llena con el CP">
+            </div>
+            <div class="form-group" style="position:relative">
+              <label>C.P. *</label>
+              <input type="text" id="co-cp" placeholder="Código postal" maxlength="5" oninput="buscarCP(this.value)">
+              <span id="cp-spinner" style="display:none;position:absolute;right:12px;bottom:14px;font-size:14px;color:#999">🔍</span>
+              <span id="cp-ok" style="display:none;position:absolute;right:12px;bottom:14px;color:var(--verde);font-size:16px">✓</span>
+            </div>
+          </div>
+          <div id="cp-error" style="display:none;font-size:12px;color:#cc3333;margin-top:-8px;margin-bottom:8px">CP no encontrado. Escribe tus datos manualmente.</div>
+          <div class="form-group"><label>Estado *</label><input type="text" id="co-estado" placeholder="Se llena con el CP"></div>
+          <div class="form-group"><label>Referencias (opcional)</label><input type="text" id="co-ref" placeholder="Entre calles, color de casa, etc."></div>
+        </div>
+
+        <!-- Sección recoger en sucursal -->
+        <div id="seccion-sucursal" style="display:none">
+          <div style="background:#e8f5ee;border:1px solid #b8dbc9;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--verde);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <i class="ti ti-tag" style="font-size:16px"></i>
+            <strong>¡Sin costo de envío!</strong> Tu marco estará listo en 10–15 días hábiles.
+          </div>
+          <div class="form-group">
+            <label>Selecciona la sucursal donde recogerás *</label>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+              <button class="sucursal-opt" id="suc-cordoba" onclick="elegirSucursal('cordoba')">
+                <i class="ti ti-map-pin" style="color:var(--verde);font-size:18px;flex-shrink:0"></i>
+                <div style="text-align:left">
+                  <strong style="display:block;font-size:13px">Sucursal Córdoba</strong>
+                  <span style="font-size:12px;color:#666">Plaza Fundadores, Local #6 · Av. 1 entre Calles 26 y 28 #2620</span>
+                </div>
+              </button>
+              <button class="sucursal-opt" id="suc-veracruz" onclick="elegirSucursal('veracruz')">
+                <i class="ti ti-map-pin" style="color:var(--verde);font-size:18px;flex-shrink:0"></i>
+                <div style="text-align:left">
+                  <strong style="display:block;font-size:13px">Sucursal Boca del Río</strong>
+                  <span style="font-size:12px;color:#666">Plaza Veleros, Local #2 · Blvd. Boca del Río 901, El Conchal</span>
+                </div>
+              </button>
+            </div>
+          </div>
+          <div style="background:#f8f8f8;border-radius:10px;padding:12px;font-size:12px;color:#666;margin-top:8px">
+            <i class="ti ti-phone" style="color:var(--verde)"></i> Te avisaremos por WhatsApp cuando tu marco esté listo para recoger.
+          </div>
+        </div>
+
+        <div class="btns-row">
+          <button class="btn-ant" onclick="irPaso(1)">← Atrás</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" onclick="irPaso(3)">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- Paso 3: Pago -->
+      <div id="cp3" style="display:none">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Método de pago</div>
+        <div id="resumen-checkout" style="background:#f8f8f8;border-radius:12px;padding:14px;margin-bottom:18px;font-size:13px"></div>
+        <!-- Pago total notice -->
+        <div style="background:#e8f5ee;border:1px solid #b8dbc9;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--verde);margin-bottom:14px;display:flex;align-items:flex-start;gap:8px">
+          <i class="ti ti-shield-check" style="font-size:16px;flex-shrink:0;margin-top:1px"></i>
+          <div>Se requiere el <strong>pago total del pedido</strong> para iniciar la producción de tu marco. Una vez confirmado el pago comenzamos de inmediato. 🖼️</div>
+        </div>
+        <button class="pago-opt" onclick="elegirPago(this,'transferencia')">
+          <i class="ti ti-building-bank" style="font-size:22px;color:var(--verde)"></i>
+          <div><div class="pago-opt-title">Transferencia / SPEI</div><div class="pago-opt-sub">Te enviamos los datos bancarios</div></div>
+        </button>
+        <button class="pago-opt" onclick="elegirPago(this,'whatsapp')">
+          <i class="ti ti-brand-whatsapp" style="font-size:22px;color:#25D366"></i>
+          <div><div class="pago-opt-title">Coordinar por WhatsApp</div><div class="pago-opt-sub">Te contactamos para acordar el pago</div></div>
+        </button>
+        <div class="transferencia-info" id="transf-info">
+          <strong>📲 Recibirás los datos bancarios por correo y WhatsApp</strong><br>
+          Beneficiario: Beverido Enmarca<br>
+          <span style="font-size:12px;color:#666">Una vez confirmado el pago total comenzamos la producción de inmediato.</span>
+        </div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="irPaso(2)">← Atrás</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" id="btn-confirmar" onclick="confirmarPedido()">
+            <span id="btn-confirmar-txt">Confirmar pedido ✓</span>
+            <span id="btn-confirmar-spin" style="display:none">Enviando...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Confirmación -->
+      <div class="confirmacion" id="confirmacion">
+        <div style="font-size:56px;margin-bottom:12px">🎉</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--verde);margin-bottom:8px">¡Pedido recibido!</div>
+        <div id="conf-folio" style="background:#e8f5ee;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;color:var(--verde);display:inline-block;margin-bottom:14px"></div>
+        <div id="conf-detalle" style="font-size:13px;color:#555;line-height:1.9;margin-bottom:18px;text-align:left;background:#f8f8f8;border-radius:10px;padding:14px"></div>
+        <p style="font-size:13px;color:#666;line-height:1.7;margin-bottom:18px">
+          Te enviamos una confirmación a tu correo y WhatsApp. <br>En cuanto recibamos tu pago comenzamos la producción. 🖼️
+        </p>
+        <a id="wa-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;padding:13px 24px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">
+          <i class="ti ti-brand-whatsapp"></i> Escribir a Beverido Enmarca
+        </a>
+        <br><button onclick="cerrarCheckout()" style="background:none;border:none;color:#999;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;margin-top:8px">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var cfg = {foto:null,nombre:'',tamano:'',tamanoLabel:'',mlColor:'',mlGrosor:'',moldura:'',molduraGrad:''};
+var carrito = [];
+
+// ── ACCORDION ──
+function toggleStep(id){
+  var card = document.getElementById('sc-'+id);
+  var isOpen = card.classList.contains('open');
+  // cerrar todos
+  ['foto','tamano','ml','moldura'].forEach(function(s){
+    document.getElementById('sc-'+s).classList.remove('open');
+  });
+  if(!isOpen) card.classList.add('open');
+}
+
+function openNextStep(current){
+  var order = ['foto','tamano','ml','moldura'];
+  var idx = order.indexOf(current);
+  if(idx >= 0 && idx < order.length - 1){
+    // cerrar actual, abrir siguiente
+    document.getElementById('sc-'+current).classList.remove('open');
+    document.getElementById('sc-'+order[idx+1]).classList.add('open');
+    // scroll to next
+    setTimeout(function(){
+      var el = document.getElementById('sc-'+order[idx+1]);
+      el.scrollIntoView({behavior:'smooth',block:'start'});
+    }, 150);
+  } else {
+    // cerrar último
+    document.getElementById('sc-'+current).classList.remove('open');
+  }
+}
+
+// Abrir el primer paso al cargar
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('sc-foto').classList.add('open');
+});
+
+// ── FOTO ──
+document.getElementById('file-inp').addEventListener('change', function(){
+  var file = this.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    cfg.foto = e.target.result;
+    cfg.nombre = file.name;
+    // update preview strip
+    var img = document.getElementById('preview-img');
+    var drop = document.getElementById('preview-drop');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    drop.style.display = 'none';
+    document.getElementById('foto-info-strip').style.display = 'flex';
+    document.getElementById('foto-nombre-strip').textContent = file.name.length > 18 ? file.name.substring(0,15)+'...' : file.name;
+    // update card
+    document.getElementById('foto-upload-area').style.display = 'none';
+    var box = document.getElementById('foto-elegida-box');
+    box.style.display = 'flex';
+    document.getElementById('foto-thumb').src = e.target.result;
+    document.getElementById('foto-nombre-card').textContent = file.name;
+    // mark done
+    document.getElementById('sc-foto').classList.add('done');
+    document.getElementById('sel-foto').textContent = '✓ Lista';
+    actualizar();
+    openNextStep('foto');
+  };
+  reader.readAsDataURL(file);
+});
+
+function quitarFoto(){
+  cfg.foto = null;
+  var img = document.getElementById('preview-img');
+  var drop = document.getElementById('preview-drop');
+  img.src=''; img.style.display='none';
+  drop.style.display='flex';
+  document.getElementById('foto-info-strip').style.display='none';
+  document.getElementById('foto-upload-area').style.display='block';
+  document.getElementById('foto-elegida-box').style.display='none';
+  document.getElementById('file-inp').value='';
+  document.getElementById('sc-foto').classList.remove('done');
+  document.getElementById('sel-foto').textContent='Elige...';
+  actualizar();
+}
+
+// ── TAMAÑO ──
+function elegirTamano(btn,val,label,sub,w,h){
+  document.querySelectorAll('.size-btn-m').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.tamano=val; cfg.tamanoLabel=label;
+  // update preview
+  var img=document.getElementById('preview-img');
+  var drop=document.getElementById('preview-drop');
+  img.style.width=w+'px'; img.style.height=h+'px';
+  drop.style.width=w+'px'; drop.style.height=h+'px';
+  document.getElementById('sc-tamano').classList.add('done');
+  document.getElementById('sel-tamano').textContent=label;
+  actualizar();
+  openNextStep('tamano');
+}
+
+// ── MARÍA LUISA ──
+function elegirML(btn,nombre,hex,border){
+  document.querySelectorAll('.ml-btn-m').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.mlColor = nombre==='Sin margen'?'':nombre;
+  var ml = document.getElementById('frame-ml');
+  var grosorSec = document.getElementById('grosor-section');
+  if(nombre==='Sin margen'){
+    ml.style.padding='0'; ml.style.background='transparent'; ml.style.border='none';
+    grosorSec.style.display='none';
+    cfg.mlGrosor='';
+    document.getElementById('sc-ml').classList.add('done');
+    document.getElementById('sel-ml').textContent='Sin margen';
+    actualizar();
+    openNextStep('ml');
+  } else {
+    ml.style.background=hex; ml.style.border='2px solid '+border;
+    ml.style.padding='4px';
+    grosorSec.style.display='block';
+    // don't advance yet — wait for grosor
+    document.getElementById('sel-ml').textContent=nombre+' (elige grosor)';
+  }
+  actualizar();
+}
+
+function elegirGrosor(btn,label,px){
+  document.querySelectorAll('.grosor-btn-m').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  btn.setAttribute('data-px',px);
+  cfg.mlGrosor = label;
+  var ml=document.getElementById('frame-ml');
+  if(cfg.mlColor) ml.style.padding=px+'px';
+  var mlLabel = document.querySelector('.ml-btn-m.on');
+  var mlNombre = mlLabel ? mlLabel.querySelector('strong').textContent : cfg.mlColor;
+  document.getElementById('sc-ml').classList.add('done');
+  document.getElementById('sel-ml').textContent=mlNombre+' · '+label;
+  actualizar();
+  openNextStep('ml');
+}
+
+// ── MOLDURA ──
+function elegirMoldura(btn,nombre,grad){
+  document.querySelectorAll('.moldura-btn-m').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.moldura=nombre; cfg.molduraGrad=grad;
+  document.getElementById('frame-ext').style.background=grad;
+  document.getElementById('sc-moldura').classList.add('done');
+  document.getElementById('sel-moldura').textContent=nombre;
+  actualizar();
+  openNextStep('moldura');
+}
+
+// ── ACTUALIZAR ──
+function actualizar(){
+  var listo = cfg.foto && cfg.tamano && cfg.moldura;
+  var btn = document.getElementById('btn-carrito');
+  btn.disabled = !listo;
+  var mini = document.getElementById('resumen-mini');
+  if(listo){
+    var t = cfg.tamanoLabel;
+    if(cfg.mlColor) t += ' · ML '+cfg.mlColor;
+    t += ' · '+cfg.moldura;
+    mini.textContent = t;
+  } else {
+    var pending = [];
+    if(!cfg.foto) pending.push('foto');
+    if(!cfg.tamano) pending.push('tamaño');
+    if(!cfg.moldura) pending.push('moldura');
+    mini.textContent = pending.length ? 'Falta: '+pending.join(', ') : '';
+  }
+}
+
+// ── CARRITO ──
+function agregarCarrito(){
+  if(!cfg.foto||!cfg.tamano||!cfg.moldura) return;
+  carrito.push({id:Date.now(),foto:cfg.foto,tamano:cfg.tamanoLabel,ml:cfg.mlColor,grosor:cfg.mlGrosor,moldura:cfg.moldura});
+  actualizarBadge();
+  abrirCarrito();
+}
+
+function actualizarBadge(){
+  var b=document.getElementById('cart-badge');
+  b.textContent=carrito.length;
+  b.style.display=carrito.length?'flex':'none';
+}
+
+function abrirCarrito(){
+  document.getElementById('carrito-overlay').style.display='block';
+  document.getElementById('carrito-panel').style.display='flex';
+  renderCarrito();
+}
+
+function cerrarCarrito(){
+  document.getElementById('carrito-overlay').style.display='none';
+  document.getElementById('carrito-panel').style.display='none';
+}
+
+function renderCarrito(){
+  var cont=document.getElementById('carrito-items');
+  var footer=document.getElementById('carrito-footer');
+  if(!carrito.length){
+    cont.innerHTML='<div style="text-align:center;padding:40px;color:#999"><i class="ti ti-shopping-cart" style="font-size:40px;display:block;margin-bottom:12px"></i>Tu carrito está vacío</div>';
+    footer.style.display='none'; return;
+  }
+  var html='';
+  carrito.forEach(function(item){
+    var desc = item.tamano;
+    if(item.ml) desc += ' · ML '+item.ml;
+    desc += ' · '+item.moldura;
+    html+='<div class="carrito-item"><img src="'+item.foto+'">';
+    html+='<div class="ci-info"><strong>Marco personalizado</strong>';
+    html+='<div class="ci-desc">'+desc+'</div>';
+    html+='<div class="ci-precio">Precio por definir</div></div>';
+    html+='<button class="ci-del" onclick="eliminarItem('+item.id+')"><i class="ti ti-trash"></i></button></div>';
+  });
+  cont.innerHTML=html;
+  footer.style.display='block';
+}
+
+function eliminarItem(id){
+  carrito=carrito.filter(function(i){return i.id!==id;});
+  actualizarBadge(); renderCarrito();
+}
+
+function irCheckout(){
+  // Si no hay sesión, mostrar modal de login primero
+  if(!window._usuarioActual){
+    cerrarCarrito();
+    window._pendienteCheckout = true;
+    abrirLoginModal(true);
+    return;
+  }
+  cerrarCarrito();
+  var ov=document.getElementById('checkout-overlay');
+  ov.style.display='flex';
+  ov.classList.add('active');
+  window.scrollTo(0,0);
+  irPaso(1);
+  try{
+    var cl=JSON.parse(localStorage.getItem('be_cliente')||'{}');
+    // Prellenar con datos de Firebase primero, luego localStorage
+    var u = window._usuarioActual;
+    var nombre = (u && u.displayName) || cl.nombre || '';
+    var email  = (u && u.email)       || cl.email  || '';
+    var tel    = cl.tel || '';
+    if(nombre) document.getElementById('co-nombre').value=nombre;
+    if(email)  document.getElementById('co-email').value=email;
+    if(tel)    document.getElementById('co-tel').value=tel;
+  }catch(e){}
+}
+
+function cerrarCheckout(){
+  var ov=document.getElementById('checkout-overlay');
+  ov.style.display='none';
+  ov.classList.remove('active');
+  [1,2,3].forEach(function(i){document.getElementById('cp'+i).style.display=i===1?'block':'none';});
+  document.getElementById('confirmacion').style.display='none';
+}
+
+function irPaso(n){
+  [1,2,3].forEach(function(i){
+    document.getElementById('cp'+i).style.display=i===n?'block':'none';
+    var sc=document.getElementById('sc'+i);
+    sc.style.background=i<=n?'#fff':'rgba(255,255,255,.3)';
+    sc.style.color=i<=n?'var(--verde)':'#fff';
+  });
+  document.getElementById('confirmacion').style.display='none';
+  if(n===3){
+    var html='';
+    carrito.forEach(function(item){
+      html+='<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">';
+      html+='<img src="'+item.foto+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px">';
+      html+='<div style="font-size:12px">'+item.tamano+' · '+item.moldura+'</div></div>';
+    });
+    if(entregaTipo==='sucursal'){
+      var sucLabel = sucursalElegida==='cordoba' ? '🏪 Recoger en Sucursal Córdoba (Plaza Fundadores, Local #6)' : sucursalElegida==='veracruz' ? '🏪 Recoger en Sucursal Boca del Río (Plaza Veleros, Local #2)' : '🏪 Recoger en tienda (sin costo)';
+      html+='<div style="font-size:12px;color:var(--verde);margin-bottom:6px;font-weight:600">'+sucLabel+'</div>';
+    } else {
+      var ciudad = document.getElementById('co-ciudad') ? document.getElementById('co-ciudad').value : '';
+      var estado = document.getElementById('co-estado') ? document.getElementById('co-estado').value : '';
+      if(ciudad||estado) html+='<div style="font-size:12px;color:#666;margin-bottom:6px">📦 Envío a domicilio: '+ciudad+(estado?' · '+estado:'')+'</div>';
+    }
+    html+='<div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:10px;margin-top:8px;font-weight:700"><span>Total:</span><span style="color:var(--verde)">Por definir</span></div>';
+    document.getElementById('resumen-checkout').innerHTML=html;
+  }
+}
+
+// ── ENTREGA ──
+var entregaTipo = 'envio'; // 'envio' | 'sucursal'
+var sucursalElegida = ''; // 'cordoba' | 'veracruz'
+
+function elegirEntrega(tipo){
+  entregaTipo = tipo;
+  document.getElementById('opt-envio').classList.toggle('on', tipo==='envio');
+  document.getElementById('opt-sucursal').classList.toggle('on', tipo==='sucursal');
+  document.getElementById('seccion-envio').style.display = tipo==='envio' ? 'block' : 'none';
+  document.getElementById('seccion-sucursal').style.display = tipo==='sucursal' ? 'block' : 'none';
+  sucursalElegida = '';
+}
+
+function elegirSucursal(id){
+  sucursalElegida = id;
+  document.querySelectorAll('.sucursal-opt').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('suc-'+id).classList.add('on');
+}
+
+function elegirPago(btn,tipo){
+  document.querySelectorAll('.pago-opt').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('transf-info').style.display=tipo==='transferencia'?'block':'none';
+}
+
+// ── AUTOCOMPLETADO CP ──
+var cpTimer = null;
+
+var CP_ESTADOS = {
+  "01":"Ciudad de Mexico","02":"Ciudad de Mexico","03":"Ciudad de Mexico",
+  "04":"Ciudad de Mexico","05":"Ciudad de Mexico","06":"Ciudad de Mexico",
+  "07":"Ciudad de Mexico","08":"Ciudad de Mexico","09":"Ciudad de Mexico",
+  "10":"Ciudad de Mexico","11":"Ciudad de Mexico","12":"Ciudad de Mexico",
+  "13":"Ciudad de Mexico","14":"Ciudad de Mexico","15":"Ciudad de Mexico",
+  "16":"Ciudad de Mexico","20":"Aguascalientes","21":"Baja California",
+  "22":"Baja California","23":"Baja California Sur","24":"Campeche",
+  "25":"Coahuila","26":"Coahuila","27":"Chiapas","28":"Colima",
+  "29":"Chiapas","30":"Chiapas","31":"Chihuahua","32":"Chihuahua",
+  "33":"Durango","34":"Durango","35":"Guanajuato","36":"Guanajuato",
+  "37":"Guanajuato","38":"Guanajuato","39":"Guerrero","40":"Guerrero",
+  "41":"Guerrero","42":"Hidalgo","43":"Hidalgo","44":"Jalisco",
+  "45":"Jalisco","46":"Jalisco","47":"Jalisco","48":"Jalisco","49":"Jalisco",
+  "50":"Estado de Mexico","51":"Estado de Mexico","52":"Estado de Mexico",
+  "53":"Estado de Mexico","54":"Estado de Mexico","55":"Estado de Mexico",
+  "56":"Estado de Mexico","57":"Estado de Mexico","58":"Michoacan",
+  "59":"Michoacan","60":"Michoacan","61":"Michoacan","62":"Morelos",
+  "63":"Nayarit","64":"Nuevo Leon","65":"Nuevo Leon","66":"Nuevo Leon",
+  "67":"Oaxaca","68":"Oaxaca","69":"Oaxaca","70":"Oaxaca","71":"Oaxaca",
+  "72":"Puebla","73":"Puebla","74":"Puebla","75":"Puebla",
+  "76":"Queretaro","77":"Quintana Roo","78":"San Luis Potosi",
+  "79":"San Luis Potosi","80":"Sinaloa","81":"Sinaloa","82":"Sinaloa",
+  "83":"Sonora","84":"Sonora","85":"Sonora","86":"Tabasco",
+  "87":"Tamaulipas","88":"Tamaulipas","89":"Tamaulipas","90":"Tlaxcala",
+  "91":"Veracruz","92":"Veracruz","93":"Veracruz","94":"Veracruz",
+  "95":"Veracruz","96":"Veracruz","97":"Yucatan","98":"Zacatecas","99":"Zacatecas"
+};
+
+var CP_MUNICIPIOS = {
+  "945":"Cordoba","946":"Cordoba","947":"Fortin","948":"Amatlipac",
+  "917":"Veracruz","918":"Veracruz","919":"Boca del Rio",
+  "910":"Xalapa","911":"Xalapa","912":"Coatepec",
+  "960":"Coatzacoalcos","961":"Coatzacoalcos",
+  "967":"Minatitlan",
+  "064":"Monterrey","065":"Garza Garcia","066":"San Nicolas",
+  "441":"Guadalajara","442":"Guadalajara","443":"Zapopan",
+  "720":"Puebla","721":"Puebla",
+  "110":"Ciudad de Mexico","111":"Ciudad de Mexico"
+};
+
+var CP_DATA = {
+  "94500":{"m":"Cordoba","e":"Veracruz","c":["Centro","Ignacio Zaragoza","Margarita Maza de Juarez","Reforma","Tepeyac"]},
+  "94501":{"m":"Cordoba","e":"Veracruz","c":["INFONAVIT Las Torres","Las Torres"]},
+  "94502":{"m":"Cordoba","e":"Veracruz","c":["La Piedad"]},
+  "94503":{"m":"Cordoba","e":"Veracruz","c":["INFONAVIT Valle Verde","Valle Verde"]},
+  "94504":{"m":"Cordoba","e":"Veracruz","c":["Colinas del Sur","Granjas del Sur"]},
+  "94505":{"m":"Cordoba","e":"Veracruz","c":["Las Flores","Santa Cruz"]},
+  "94506":{"m":"Cordoba","e":"Veracruz","c":["Campo Militar","Galaxias","Hacienda los Angeles"]},
+  "94507":{"m":"Cordoba","e":"Veracruz","c":["Bugambilias","La Joya","Los Cedros"]},
+  "94508":{"m":"Cordoba","e":"Veracruz","c":["Nuevo Cordoba","Villas del Cafetal"]},
+  "94509":{"m":"Cordoba","e":"Veracruz","c":["Fracc. Los Pinos","Villa del Sol"]},
+  "94510":{"m":"Cordoba","e":"Veracruz","c":["Ampliacion 16 de Septiembre","El Castillo","Guadalupe","Las Brisas","Plan de Ayala"]},
+  "94520":{"m":"Cordoba","e":"Veracruz","c":["El Potrero","La Palma","La Pirinola","Unidad Habitacional Cuauhtemoc","Vista Verde"]},
+  "94530":{"m":"Cordoba","e":"Veracruz","c":["Azteca","El Bosque","El Espinal","Rio Blanco","Santa Rosa"]},
+  "94532":{"m":"Cordoba","e":"Veracruz","c":["Ampliacion Azteca","San Pedro"]},
+  "94534":{"m":"Cordoba","e":"Veracruz","c":["Cristobal Colon","Nuevo Tecolutla","San Isidro"]},
+  "94540":{"m":"Cordoba","e":"Veracruz","c":["5 de Mayo","Heroes de Nacozari","Penon","Revolucion","San Jose"]},
+  "94542":{"m":"Cordoba","e":"Veracruz","c":["El Penon","La Estacion","Lomas del Bosque"]},
+  "94544":{"m":"Cordoba","e":"Veracruz","c":["La Caida","Nuevo San Jose","Vergel"]},
+  "94550":{"m":"Cordoba","e":"Veracruz","c":["Animas","El Olmo","Guerrero","Moctezuma","Pedregal"]},
+  "94560":{"m":"Cordoba","e":"Veracruz","c":["Amalia","Lirios","Renacimiento","San Marcos","Villas del Rio"]},
+  "94570":{"m":"Cordoba","e":"Veracruz","c":["Benito Juarez","Jardin","La Luz","Obrero","Vicente Guerrero"]},
+  "94580":{"m":"Cordoba","e":"Veracruz","c":["El Porvenir","Emiliano Zapata","La Estacion","Lomas de Palmira"]},
+  "94590":{"m":"Cordoba","e":"Veracruz","c":["Chocaman","El Naranjillo","Vista Hermosa"]},
+  "94470":{"m":"Fortin","e":"Veracruz","c":["Centro","El Calvario","La Gloria","Las Flores","Los Pinos"]},
+  "94473":{"m":"Fortin","e":"Veracruz","c":["Fracc. Las Orquideas","Plan de Ayala"]},
+  "94474":{"m":"Fortin","e":"Veracruz","c":["El Rincon","Las Parotas","San Marcos"]},
+  "94476":{"m":"Fortin","e":"Veracruz","c":["La Canada","Las Brisas","Nuevo Fortin"]},
+  "94478":{"m":"Fortin","e":"Veracruz","c":["Puente Jula","San Isidro Apompa"]},
+  "94300":{"m":"Orizaba","e":"Veracruz","c":["Centro","La Pastoresa","Napoles","Rafael Murillo Vidal","Tecajete"]},
+  "94302":{"m":"Orizaba","e":"Veracruz","c":["El Cerro","La Luz","Obrero"]},
+  "94304":{"m":"Orizaba","e":"Veracruz","c":["Benito Juarez","La Estacion","Oriente"]},
+  "94306":{"m":"Orizaba","e":"Veracruz","c":["El Estadio","Las Flores","Nogales"]},
+  "94308":{"m":"Orizaba","e":"Veracruz","c":["INFONAVIT Orizaba","Nuevo Orizaba","San Jose"]},
+  "91700":{"m":"Veracruz","e":"Veracruz","c":["Centro","Flores Magon","Miguel Hidalgo","Reforma","Salvador Diaz Miron","Volcanica"]},
+  "91710":{"m":"Veracruz","e":"Veracruz","c":["Alvarado","El Malecon","Revolucion"]},
+  "91720":{"m":"Veracruz","e":"Veracruz","c":["Aguacatal","Argentina","Ciudad Deportiva","Las Flores"]},
+  "91730":{"m":"Veracruz","e":"Veracruz","c":["Buenavista","Emiliano Zapata","Nueva Era","Veracruz 2000"]},
+  "91740":{"m":"Veracruz","e":"Veracruz","c":["Del Mar","El Tejar","Fracc. Campestre","Moctezuma"]},
+  "91750":{"m":"Veracruz","e":"Veracruz","c":["Formando Hogar","Gaviotas","Ignacio Zaragoza","Petrolera"]},
+  "91760":{"m":"Veracruz","e":"Veracruz","c":["Balcones del Valle","El Carmen","Floresta","Las Bajadas","Pocitos","Zaragoza"]},
+  "91770":{"m":"Veracruz","e":"Veracruz","c":["Costa Verde","Industrial","Las Vegas","Lomas del Estadio"]},
+  "91780":{"m":"Veracruz","e":"Veracruz","c":["Ampliacion las Bajadas","El Vergel","La Boticaria","Mata Espino"]},
+  "91790":{"m":"Veracruz","e":"Veracruz","c":["El Arenal","Fracc. Costa de Oro","Las Americas","Roma"]},
+  "91800":{"m":"Veracruz","e":"Veracruz","c":["16 de Septiembre","Aguacatal","Del Mar","Gonzalo Aguirre","Ignacio de la Llave"]},
+  "91810":{"m":"Boca del Rio","e":"Veracruz","c":["Centro","Las Playas","Lomas del Rio","Paraiso","Rivera Veracruzana","Virgilio Uribe"]},
+  "91820":{"m":"Boca del Rio","e":"Veracruz","c":["El Conchal","Gran Via Tropical","Mandinga","Playa de Vacas"]},
+  "91830":{"m":"Boca del Rio","e":"Veracruz","c":["Fracc. Costa de Oro","Las Americas","Reforma","Roma"]},
+  "91900":{"m":"Boca del Rio","e":"Veracruz","c":["Costa de Oro","El Morro","La Calzada","Mocambo","Villa del Mar"]},
+  "91910":{"m":"Boca del Rio","e":"Veracruz","c":["Fracc. Marina","Los Pinos","Marina Boca del Rio","Playa Linda","Zerezotla"]},
+  "91920":{"m":"Boca del Rio","e":"Veracruz","c":["Jardines de Mocambo","Las Hamacas","Nuevo Boca del Rio","Playa de Hornos"]},
+  "91000":{"m":"Xalapa","e":"Veracruz","c":["Centro","Encinal","Obrero Campesina","Rafael Lucio","Tamiahua"]},
+  "91010":{"m":"Xalapa","e":"Veracruz","c":["El Olmo","La Rotonda","Lazaro Cardenas","Morelos"]},
+  "91020":{"m":"Xalapa","e":"Veracruz","c":["Casa Blanca","El Mirador","Las Animas","Nieto","Tequileria"]},
+  "91030":{"m":"Xalapa","e":"Veracruz","c":["3 de Mayo","Emiliano Zapata","Felipe Carrillo Puerto","Lomas del Estadio"]},
+  "91040":{"m":"Xalapa","e":"Veracruz","c":["Araucarias","Benito Juarez","El Sumidero","Formando Hogar","Pensiones"]},
+  "91050":{"m":"Xalapa","e":"Veracruz","c":["Alcade Barrio Nuevo","Deportivo Obrero","Higueras","Nuevo Xalapa"]},
+  "91060":{"m":"Xalapa","e":"Veracruz","c":["Adalberto Tejeda","El Mango","Los Pinos","San Bruno"]},
+  "91070":{"m":"Xalapa","e":"Veracruz","c":["Buenavista","El Nopale","Jesus Reyes Heroles","San Francisco"]},
+  "91090":{"m":"Xalapa","e":"Veracruz","c":["El Copero","Hacienda Tuzamapan","Las Palomas","Pozo del Monte"]},
+  "96400":{"m":"Coatzacoalcos","e":"Veracruz","c":["Centro","El Tesoro","Las Flores","Olmeca","Plutarco Elias"]},
+  "96410":{"m":"Coatzacoalcos","e":"Veracruz","c":["Las Granjas","Los Pinos","Nuevo Coatzacoalcos","Villa Rica"]},
+  "96420":{"m":"Coatzacoalcos","e":"Veracruz","c":["Agua Dulce","El Paraiso","INFONAVIT","La Manga"]},
+  "96430":{"m":"Coatzacoalcos","e":"Veracruz","c":["El Caracol","El Espejo","Fracc. Electra","Gonzalo Aguirre"]},
+  "96440":{"m":"Coatzacoalcos","e":"Veracruz","c":["Ampliacion Republica","La Castellana","La Defensa","Republica"]},
+  "96460":{"m":"Coatzacoalcos","e":"Veracruz","c":["5 de Febrero","El Vigia","Fracc. Los Alamos","La Rinconada"]},
+  "96740":{"m":"Minatitlan","e":"Veracruz","c":["Centro","La Alianza","La Villa","Los Pinos","Plutarco Elias"]},
+  "96750":{"m":"Minatitlan","e":"Veracruz","c":["El Tejar","INFONAVIT Minatitlan","Lazaro Cardenas","Rivera Alta"]},
+  "06000":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Centro Historico","Guerrero","Morelos","Tepito"]},
+  "06040":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Buenavista","Guerrero","Santa Maria la Ribera"]},
+  "06300":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Buenos Aires","Doctores","Roma Sur","Transito"]},
+  "06400":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Algarin","Doctores","Obrera","Volcanica"]},
+  "06500":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Esperanza","Hipodromo","Narvarte","Roma Norte","Roma Sur"]},
+  "06600":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Juarez","Roma Norte","San Rafael","Tabacalera"]},
+  "06700":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Escandon","Hipodromo Condesa","Noche Buena","Vertiz Narvarte"]},
+  "06800":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Anahuac","Argentina","San Miguel Chapultepec"]},
+  "06900":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Colonia del Valle","Del Valle Centro","Del Valle Norte","Del Valle Sur"]},
+  "11000":{"m":"Miguel Hidalgo","e":"Ciudad de Mexico","c":["Anzures","Granada","Polanco","San Miguel Chapultepec"]},
+  "11200":{"m":"Miguel Hidalgo","e":"Ciudad de Mexico","c":["Bosques de las Lomas","Lomas de Chapultepec","Palmitas"]},
+  "11400":{"m":"Miguel Hidalgo","e":"Ciudad de Mexico","c":["Ampliacion Palmas","Lomas de Reforma","Popo"]},
+  "11500":{"m":"Miguel Hidalgo","e":"Ciudad de Mexico","c":["Bosque de Chapultepec","Observatorio","San Juan"]},
+  "11570":{"m":"Miguel Hidalgo","e":"Ciudad de Mexico","c":["Chapultepec","Fracc. Lomas Altas","Lomas Barrilaco"]},
+  "03100":{"m":"Benito Juarez","e":"Ciudad de Mexico","c":["Narvarte Oriente","Narvarte Poniente","Vertiz Narvarte"]},
+  "03600":{"m":"Benito Juarez","e":"Ciudad de Mexico","c":["Actipan","Del Valle Centro","Del Valle Norte","Del Valle Sur"]},
+  "03900":{"m":"Benito Juarez","e":"Ciudad de Mexico","c":["Insurgentes Mixcoac","Mixcoac","Nonoalco","Piedad Narvarte"]},
+  "64000":{"m":"Monterrey","e":"Nuevo Leon","c":["Centro","Independencia","Obispado","San Luisito","Tecnologico"]},
+  "64010":{"m":"Monterrey","e":"Nuevo Leon","c":["Chepevera","Jardines del Bosque","Mitras Centro","Mitras Norte","Mitras Sur"]},
+  "64020":{"m":"Monterrey","e":"Nuevo Leon","c":["Del Valle","Nueva Espana","Prado","San Jeronimo"]},
+  "64050":{"m":"Monterrey","e":"Nuevo Leon","c":["Azteca","Fierro","Industrial","Moderna","Obrera"]},
+  "64060":{"m":"Monterrey","e":"Nuevo Leon","c":["Loma Larga","Mitras Poniente","Vista Hermosa"]},
+  "64080":{"m":"Monterrey","e":"Nuevo Leon","c":["Chapultepec","Del Paseo Residencial","Estrella","Las Quintas"]},
+  "64100":{"m":"Monterrey","e":"Nuevo Leon","c":["Caracol","Colorines","Estadio","Ferrocarril"]},
+  "64120":{"m":"Monterrey","e":"Nuevo Leon","c":["Altamira","Contry","Del Bosque","Las Cumbres"]},
+  "66220":{"m":"Garza Garcia","e":"Nuevo Leon","c":["Carrizalejo","Fuentes del Valle","Las Palmas","Rio del Valle","Valle Oriente"]},
+  "66230":{"m":"Garza Garcia","e":"Nuevo Leon","c":["Acueducto","Las Misiones","Lomas del Valle","Valle Alto"]},
+  "66400":{"m":"San Nicolas de los Garza","e":"Nuevo Leon","c":["Contry Sur","La Estanzuela","Paseo del Prado","Praderas de San Nicolas"]},
+  "44100":{"m":"Guadalajara","e":"Jalisco","c":["Analco","Centro","Mexicaltzingo","San Juan de Dios","Santa Teresita"]},
+  "44130":{"m":"Guadalajara","e":"Jalisco","c":["Barrio de los Mangos","Concepcion","La Perla","San Andres"]},
+  "44140":{"m":"Guadalajara","e":"Jalisco","c":["El Alamo","El Refugio","Ferrocarril","La Nogalera"]},
+  "44200":{"m":"Guadalajara","e":"Jalisco","c":["Alcalde","El Rosario","Francesa","Prados Vallarta"]},
+  "44280":{"m":"Guadalajara","e":"Jalisco","c":["Balcones del Cuatro","El Retono","Lomas del Paraiso","Parques del Bosque"]},
+  "44300":{"m":"Guadalajara","e":"Jalisco","c":["5 de Febrero","Chapalita","El Colli","Las Americas"]},
+  "44600":{"m":"Guadalajara","e":"Jalisco","c":["Arboledas","Chapalita","Jardines del Bosque","Mezquitera"]},
+  "44900":{"m":"Guadalajara","e":"Jalisco","c":["Atlas Colomos","Colomos","El Vergel","Terranova"]},
+  "45050":{"m":"Zapopan","e":"Jalisco","c":["Ciudad Granja","El Colli Urbano","Jardines del Bosque","Las Huertas"]},
+  "45070":{"m":"Zapopan","e":"Jalisco","c":["El Palomar","La Cofradia","La Venta del Astillero","Tesistan"]},
+  "72000":{"m":"Puebla","e":"Puebla","c":["Centro","El Alto","El Carmen","La Victoria","Xonaca"]},
+  "72100":{"m":"Puebla","e":"Puebla","c":["Analco","La Paz","San Pablo","Santiago"]},
+  "72200":{"m":"Puebla","e":"Puebla","c":["El Carmen","Los Pinos","Rancho Colorado","San Manuel"]},
+  "72300":{"m":"Puebla","e":"Puebla","c":["El Vergel","Lomas de Angelopolis","Prados Agua Azul","San Jorge"]},
+  "72400":{"m":"Puebla","e":"Puebla","c":["Bella Vista","Ciudad Universitaria","Cuautlancingo","El Cerrito"]},
+  "72500":{"m":"Puebla","e":"Puebla","c":["Aldea del Prado","BUAP","Chapultepec","San Lorenzo","Universidad"]},
+  "72530":{"m":"Puebla","e":"Puebla","c":["El Refugio","Huexotitla","La Paz","San Bartolo"]},
+  "72550":{"m":"Puebla","e":"Puebla","c":["Ciudad Modelo","INFONAVIT Amalucan","La Haciendita","Loma Encantada"]},
+  "76000":{"m":"Santiago de Queretaro","e":"Queretaro","c":["Centro","El Retablo","La Capilla","Ninos Heroes"]},
+  "76040":{"m":"Santiago de Queretaro","e":"Queretaro","c":["Buenavista","Cimatario","El Mirador","La Canada"]},
+  "76080":{"m":"Santiago de Queretaro","e":"Queretaro","c":["Banda","El Pedregal","Juriquilla","La Loma"]},
+  "76100":{"m":"Santiago de Queretaro","e":"Queretaro","c":["Aztlan","Felipe Carrillo Puerto","Lomas de Queretaro","San Marcos"]},
+  "77500":{"m":"Cancun","e":"Quintana Roo","c":["Centro","Ciudad Cancun","Las Palmas","Supermanzana 2","Supermanzana 23"]},
+  "77510":{"m":"Cancun","e":"Quintana Roo","c":["Bonampak","Kukulcan","Las Palmas","Supermanzana 3","Supermanzana 4"]},
+  "77520":{"m":"Cancun","e":"Quintana Roo","c":["Bonfil","Luis Donaldo Colosio","Pok-Ta-Pok","Supermanzana 21"]},
+  "77560":{"m":"Cancun","e":"Quintana Roo","c":["El Petempich","El Tintal","Las Brisas","PEMEX"]},
+  "97000":{"m":"Merida","e":"Yucatan","c":["Centro","Garcia Gieres","Jesus Carranza","Mejorada","Santa Ana"]},
+  "97070":{"m":"Merida","e":"Yucatan","c":["Bojorquez","Chuburna","Emilio Portes Gil","Miguel Hidalgo"]},
+  "97100":{"m":"Merida","e":"Yucatan","c":["Campestre","Francisco de Montejo","Fracc. Los Heroes","Loma Bonita"]},
+  "97120":{"m":"Merida","e":"Yucatan","c":["Chuburna de Hidalgo","Ctm Cuauhtemoc","La Ceiba","Las Americas"]},
+  "90000":{"m":"Tlaxcala","e":"Tlaxcala","c":["Centro","El Carmen","La Loma","Octelulco","San Diego Metepec"]},
+  "90010":{"m":"Tlaxcala","e":"Tlaxcala","c":["El Chichimeco","Guadalupe Texcalac","Los Portales","San Gabriel"]},
+  "24000":{"m":"Campeche","e":"Campeche","c":["Aquiles Serdan","Barrio de Guadalupe","Barrio de San Francisco","Centro","San Roman"]},
+  "24020":{"m":"Campeche","e":"Campeche","c":["INFONAVIT CTM","La Florida","Lindavista","Monclova","Nueva Campeche"]}
+};
+
+function buscarCP(val){
+  val = val.replace(/\D/g,'');
+  document.getElementById('co-cp').value = val;
+  document.getElementById('cp-ok').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'none';
+  document.getElementById('co-ciudad').value = '';
+  document.getElementById('co-estado').value = '';
+  var cg = document.getElementById('colonia-group');
+  if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu CP para ver colonias">';
+  if(val.length < 5){ document.getElementById('cp-spinner').style.display='none'; return; }
+  document.getElementById('cp-spinner').style.display = 'block';
+  clearTimeout(cpTimer);
+  cpTimer = setTimeout(function(){ buscarConSepomex(val); }, 300);
+}
+
+function buscarConSepomex(cp){
+  document.getElementById('cp-spinner').style.display = 'none';
+  if(CP_DATA[cp]){
+    var d = CP_DATA[cp];
+    aplicarCP(d.m, d.e, d.c);
+    return;
+  }
+  var pref2 = cp.substring(0,2);
+  var estadoDeducido = CP_ESTADOS[pref2] || '';
+  var pref3 = cp.substring(0,3);
+  var munDeducido = CP_MUNICIPIOS[pref3] || '';
+  if(estadoDeducido){
+    document.getElementById('co-estado').value = estadoDeducido;
+    if(munDeducido) document.getElementById('co-ciudad').value = munDeducido;
+    document.getElementById('cp-ok').style.display = 'block';
+    document.getElementById('cp-error').style.display = 'none';
+    var cg = document.getElementById('colonia-group');
+    if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+    document.getElementById('co-ciudad').removeAttribute('readonly');
+  } else {
+    mostrarCPError();
+  }
+}
+
+function aplicarCP(ciudad, estado, colonias){
+  document.getElementById('co-ciudad').value = ciudad;
+  document.getElementById('co-estado').value = estado;
+  document.getElementById('cp-ok').style.display = 'block';
+  document.getElementById('cp-error').style.display = 'none';
+  mostrarColonias(colonias);
+}
+
+function mostrarColonias(colonias){
+  var cg = document.getElementById('colonia-group');
+  if(!cg) return;
+  if(!colonias || !colonias.length){
+    cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+    return;
+  }
+  var html = '<label>Colonia *</label>';
+  html += '<select id="co-colonia" style="width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:#fff;cursor:pointer">';
+  html += '<option value="">Selecciona tu colonia</option>';
+  colonias.forEach(function(col){
+    html += '<option value="' + col + '">' + col + '</option>';
+  });
+  html += '</select>';
+  cg.innerHTML = html;
+}
+
+function mostrarCPError(){
+  document.getElementById('cp-spinner').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'block';
+  document.getElementById('cp-error').style.color = '#cc3333';
+  document.getElementById('cp-error').textContent = 'CP no encontrado. Escribe tus datos manualmente.';
+  document.getElementById('cp-ok').style.display = 'none';
+  document.getElementById('co-ciudad').value = '';
+  document.getElementById('co-estado').value = '';
+  var cg = document.getElementById('colonia-group');
+  if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+  document.getElementById('co-ciudad').removeAttribute('readonly');
+}
+
+function fmtCard(inp){ var v=inp.value.replace(/\D/g,'').substring(0,16); inp.value=v.replace(/(\d{4})/g,'$1 ').trim(); }
+function fmtExp(inp){ var v=inp.value.replace(/\D/g,'').substring(0,4); if(v.length>=3) v=v.substring(0,2)+'/'+v.substring(2); inp.value=v; }
+
+// ── AUTH UI ──
+window._usuarioActual = null;
+window._pendienteCheckout = false;
+
+function actualizarUIAuth(user){
+  var banner = document.getElementById('auth-banner');
+  var bannerMsg = document.getElementById('auth-banner-msg');
+  var bannerBtn = document.getElementById('auth-banner-btn');
+  banner.style.display = 'flex';
+  if(user){
+    var nombre = user.displayName || user.email || 'Usuario';
+    var fotoURL = user.photoURL;
+    var avatarHTML = fotoURL ? '<img src="'+fotoURL+'" class="auth-avatar" style="display:inline-block;vertical-align:middle;margin-right:8px">' : '';
+    bannerMsg.innerHTML = avatarHTML + 'Hola, <strong>'+nombre.split(' ')[0]+'</strong>';
+    bannerBtn.textContent = 'Cerrar sesión';
+    bannerBtn.onclick = function(){ cerrarSesion(); };
+    bannerBtn.style.background = 'none';
+    bannerBtn.style.color = 'var(--tx2)';
+    bannerBtn.style.border = '1px solid var(--bd)';
+    bannerBtn.style.fontSize = '11px';
+    // Prellenar datos en checkout
+    try {
+      if(user.displayName && document.getElementById('co-nombre') && !document.getElementById('co-nombre').value)
+        document.getElementById('co-nombre').value = user.displayName;
+      if(user.email && document.getElementById('co-email') && !document.getElementById('co-email').value)
+        document.getElementById('co-email').value = user.email;
+    } catch(e){}
+  } else {
+    bannerMsg.innerHTML = '¿Ya eres cliente? <strong>Inicia sesión</strong> para guardar tus datos.';
+    bannerBtn.textContent = 'Iniciar sesión';
+    bannerBtn.onclick = function(){ abrirLoginModal(false); };
+    bannerBtn.style.background = 'var(--verde)';
+    bannerBtn.style.color = '#fff';
+    bannerBtn.style.border = 'none';
+    bannerBtn.style.fontSize = '12px';
+  }
+}
+
+function abrirLoginModal(requiereLogin){
+  var modal = document.getElementById('login-modal');
+  var sub = document.getElementById('login-sub');
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+  document.getElementById('login-error').style.display = 'none';
+  if(requiereLogin){
+    sub.textContent = 'Necesitas iniciar sesión para continuar con tu pedido.';
+    document.getElementById('login-modal').dataset.requiere = '1';
+  } else {
+    sub.textContent = 'Inicia sesión para guardar tus datos y hacer pedidos más rápido.';
+    document.getElementById('login-modal').dataset.requiere = '0';
+  }
+}
+
+function cerrarLoginModal(){
+  document.getElementById('login-modal').style.display = 'none';
+  document.getElementById('login-modal').classList.remove('active');
+  // Si el usuario decidió continuar sin cuenta, dejar ir al checkout
+  if(window._pendienteCheckout){
+    window._pendienteCheckout = false;
+    irCheckout();
+  }
+}
+
+function toggleLoginModo(){
+  var modoDiv = document.getElementById('login-modo');
+  var btn = document.getElementById('login-email-btn');
+  var toggle = document.querySelector('.login-toggle span');
+  if(modoDiv.dataset.modo === 'login'){
+    modoDiv.dataset.modo = 'registro';
+    btn.textContent = 'Crear cuenta';
+    toggle.textContent = 'Ya tengo cuenta';
+    toggle.previousSibling.textContent = '¿Ya tienes cuenta? ';
+  } else {
+    modoDiv.dataset.modo = 'login';
+    btn.textContent = 'Iniciar sesión';
+    toggle.textContent = 'Regístrate';
+    toggle.previousSibling.textContent = '¿No tienes cuenta? ';
+  }
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// ── EmailJS (iniciado con tus claves) ──
+// Para activar: crea cuenta gratis en emailjs.com, crea un servicio y dos plantillas,
+// luego reemplaza los valores de abajo con los tuyos.
+var EMAILJS_PUBLIC_KEY  = '_CuJeA4PF2v6nvIjO';
+var EMAILJS_SERVICE_ID  = 'service_beverido';
+var EMAILJS_TPL_CLIENTE = 'template_8y1ut7f';
+var EMAILJS_TPL_TIENDA  = 'template_64uqlef';
+
+function confirmarPedido(){
+  var nombre = document.getElementById('co-nombre').value.trim();
+  var email  = document.getElementById('co-email').value.trim();
+  var tel    = document.getElementById('co-tel').value.trim();
+  if(!nombre||!email||!tel){ alert('Completa tus datos de contacto en el Paso 1 primero.'); irPaso(1); return; }
+
+  // Validación entrega
+  if(entregaTipo==='sucursal' && !sucursalElegida){
+    alert('Por favor selecciona la sucursal donde recogerás tu pedido.'); irPaso(2); return;
+  }
+  if(entregaTipo==='envio'){
+    var calle = (document.getElementById('co-calle')||{}).value||'';
+    if(!calle.trim()){ alert('Por favor ingresa tu dirección de envío.'); irPaso(2); return; }
+  }
+
+  // Guardar datos para próxima vez
+  localStorage.setItem('be_cliente', JSON.stringify({nombre:nombre,email:email,tel:tel}));
+
+  // Folio único
+  var folio = 'BE-' + Date.now();
+
+  // Construir resumen de pedido
+  var resumenItems = '';
+  carrito.forEach(function(item, i){
+    resumenItems += (i+1)+'. '+item.tamano;
+    if(item.ml) resumenItems += ' · ML '+item.ml+(item.grosor?' ('+item.grosor+')':'');
+    resumenItems += ' · Moldura: '+item.moldura+'\n';
+  });
+
+  // Datos de entrega
+  var entregaTexto = '';
+  if(entregaTipo === 'sucursal'){
+    var suc = sucursalElegida === 'cordoba'
+      ? 'Sucursal Córdoba — Plaza Fundadores, Local #6 · Av. 1 entre Calles 26 y 28 #2620, Córdoba, Ver.'
+      : 'Sucursal Boca del Río — Plaza Veleros, Local #2 · Blvd. Boca del Río 901, El Conchal, Boca del Río, Ver.';
+    entregaTexto = 'RECOGER EN TIENDA (sin costo)\n' + suc;
+  } else {
+    var cal  = (document.getElementById('co-calle')||{}).value||'';
+    var col  = (document.getElementById('co-colonia')||{}).value||'';
+    var cd   = (document.getElementById('co-ciudad')||{}).value||'';
+    var cp   = (document.getElementById('co-cp')||{}).value||'';
+    var est  = (document.getElementById('co-estado')||{}).value||'';
+    var ref  = (document.getElementById('co-ref')||{}).value||'';
+    entregaTexto = 'ENVÍO A DOMICILIO\n'+cal+', '+col+'\n'+cd+', '+est+' CP '+cp+(ref?'\nRef: '+ref:'');
+  }
+
+  // Mostrar spinner
+  document.getElementById('btn-confirmar-txt').style.display='none';
+  document.getElementById('btn-confirmar-spin').style.display='inline';
+  document.getElementById('btn-confirmar').disabled=true;
+
+  // Subir foto a Cloudinary (si hay foto)
+  function enviarConFotoURL(fotoURL){
+    // Parámetros para EmailJS
+    var paramsCliente = {
+      folio: folio,
+      cliente_nombre: nombre,
+      cliente_email: email,
+      cliente_tel: tel,
+      resumen_pedido: resumenItems,
+      entrega: entregaTexto,
+      foto_url: fotoURL || '(foto incluida en pedido)'
+    };
+    var paramsTienda = {
+      folio: folio,
+      cliente_nombre: nombre,
+      cliente_email: email,
+      cliente_tel: tel,
+      resumen_pedido: resumenItems,
+      entrega: entregaTexto,
+      foto_url: fotoURL || 'Sin URL (foto grande — revisa WhatsApp)',
+      metodo_pago: document.querySelector('.pago-opt.on .pago-opt-title') ? document.querySelector('.pago-opt.on .pago-opt-title').textContent : 'Sin seleccionar'
+    };
+
+    var emailsSent = 0;
+    var emailErrors = 0;
+    var errorMsgs = [];
+    function checkDone(){
+      if(emailsSent + emailErrors < 2) return;
+      if(errorMsgs.length > 0){
+        // Mostrar error visible en pantalla
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText='position:fixed;bottom:20px;left:16px;right:16px;background:#cc3333;color:#fff;padding:14px 16px;border-radius:12px;font-size:13px;z-index:9999;font-family:Inter,sans-serif;line-height:1.5';
+        errDiv.innerHTML = '<strong>⚠️ Error al enviar correo:</strong><br>' + errorMsgs.join('<br>');
+        document.body.appendChild(errDiv);
+        setTimeout(function(){ errDiv.remove(); }, 12000);
+      }
+      finalizarPedido(folio, nombre, tel, resumenItems, entregaTexto);
+    }
+
+    // Email al cliente
+    try {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TPL_CLIENTE, paramsCliente)
+        .then(function(r){ emailsSent++; checkDone(); })
+        .catch(function(e){ errorMsgs.push('Cliente: '+(e.text||e.message||JSON.stringify(e))); emailErrors++; checkDone(); });
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TPL_TIENDA, paramsTienda)
+        .then(function(r){ emailsSent++; checkDone(); })
+        .catch(function(e){ errorMsgs.push('Tienda: '+(e.text||e.message||JSON.stringify(e))); emailErrors++; checkDone(); });
+    } catch(e){
+      // EmailJS no configurado aún — continuar igual
+      var errDiv2 = document.createElement('div');
+      errDiv2.style.cssText='position:fixed;bottom:20px;left:16px;right:16px;background:#cc3333;color:#fff;padding:14px 16px;border-radius:12px;font-size:13px;z-index:9999;font-family:Inter,sans-serif';
+      errDiv2.innerHTML = '<strong>⚠️ Error EmailJS (init):</strong><br>'+(e.message||e.toString());
+      document.body.appendChild(errDiv2);
+      setTimeout(function(){ errDiv2.remove(); }, 12000);
+      finalizarPedido(folio, nombre, tel, resumenItems, entregaTexto);
+    }
+  }
+
+  // Subir foto a ImgBB
+  var IMGBB_API_KEY = '773ae2001243f05869339390014e4c03';
+
+  if(cfg.foto && cfg.foto.startsWith('data:')){
+    // Convertir data URL a base64 puro (sin el prefijo)
+    var base64 = cfg.foto.split(',')[1];
+    var fd = new FormData();
+    fd.append('key', IMGBB_API_KEY);
+    fd.append('image', base64);
+    fd.append('name', folio);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://api.imgbb.com/1/upload');
+    xhr.onload = function(){
+      try {
+        var res = JSON.parse(xhr.responseText);
+        enviarConFotoURL(res.data && res.data.url ? res.data.url : '');
+      } catch(e){ enviarConFotoURL(''); }
+    };
+    xhr.onerror = function(){ enviarConFotoURL(''); };
+    xhr.send(fd);
+  } else {
+    // Sin foto — continuar sin URL
+    enviarConFotoURL('');
+  }
+}
+
+function finalizarPedido(folio, nombre, tel, resumenItems, entregaTexto){
+  // Ocultar pasos, mostrar confirmación
+  [1,2,3].forEach(function(i){document.getElementById('cp'+i).style.display='none';});
+  document.getElementById('confirmacion').style.display='block';
+
+  // Folio
+  document.getElementById('conf-folio').textContent = '📋 Folio: ' + folio;
+
+  // Detalle
+  var html = '<div style="font-weight:700;margin-bottom:6px">Resumen de tu pedido</div>';
+  html += '<pre style="white-space:pre-wrap;font-family:Inter,sans-serif;font-size:12px;color:#444;line-height:1.8">';
+  html += resumenItems;
+  html += '\n📍 Entrega:\n'+entregaTexto;
+  html += '</pre>';
+  document.getElementById('conf-detalle').innerHTML = html;
+
+  // WhatsApp al número de la tienda (confirmación manual)
+  var msg = 'Hola%21+Acabo+de+hacer+un+pedido+en+Beverido+Enmarca.%0A%0A';
+  msg += '*Folio%3A+' + folio + '*%0A';
+  msg += 'Nombre%3A+' + encodeURIComponent(nombre) + '%0A';
+  msg += 'Tel%3A+' + encodeURIComponent(tel) + '%0A%0A';
+  msg += 'Pedido%3A%0A' + encodeURIComponent(resumenItems);
+  msg += '%0A' + encodeURIComponent(entregaTexto);
+  document.getElementById('wa-link').href = 'https://wa.me/522711079327?text=' + msg;
+
+  // Limpiar carrito
+  carrito = []; actualizarBadge();
+
+  // Restaurar botón
+  document.getElementById('btn-confirmar-txt').style.display='inline';
+  document.getElementById('btn-confirmar-spin').style.display='none';
+  document.getElementById('btn-confirmar').disabled=false;
+}
+</script>
+</body>
+</html>
