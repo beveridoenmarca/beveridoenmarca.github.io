@@ -105,7 +105,7 @@ body{font-family:Inter,sans-serif;background:#f8f7f4;height:100vh;overflow:hidde
 .cart-badge{display:none;position:absolute;top:-4px;right:-2px;background:var(--verde);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center}
 
 /* ── MAIN SCROLL AREA ── */
-.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:88px}
+.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:140px}
 
 /* ── PREVIEW STRIP (top) ── */
 .preview-strip{background:#f0ede8;padding:16px;display:flex;align-items:center;justify-content:center;min-height:140px}
@@ -836,7 +836,7 @@ function actualizar(){
     if(!cfg.foto) pending.push('foto');
     if(!cfg.tamano) pending.push('tamaño');
     if(!cfg.moldura) pending.push('moldura');
-    mini.textContent = pending.length ? 'Falta: '+pending.join(', ') : '';
+    mini.textContent = pending.length ? 'Falta seleccionar: '+pending.join(', ') : '';
   }
 }
 
