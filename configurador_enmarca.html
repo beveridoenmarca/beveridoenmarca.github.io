@@ -178,10 +178,10 @@ body{font-family:Inter,sans-serif;background:#f8f7f4;height:100vh;overflow:hidde
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);padding:12px 16px;z-index:50}
 .resumen-mini{font-size:11px;color:var(--tx2);margin-bottom:8px;min-height:14px;line-height:1.4}
 .bottom-btns{display:flex;gap:10px}
-.btn-carrito-main{flex:1;padding:15px;background:var(--verde);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
-.btn-carrito-main:disabled{opacity:.38;cursor:not-allowed}
-.btn-comprar-ahora{flex:1;padding:15px;background:#fff;color:var(--verde);border:2px solid var(--verde);border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
-.btn-comprar-ahora:disabled{opacity:.38;cursor:not-allowed}
+.btn-carrito-main{flex:1;padding:15px;background:var(--verde);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
+.btn-carrito-main:disabled{background:#ccc;color:#888;cursor:not-allowed}
+.btn-comprar-ahora{flex:1;padding:15px;background:#fff;color:var(--verde);border:2px solid var(--verde);border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
+.btn-comprar-ahora:disabled{color:#aaa;border-color:#ccc;cursor:not-allowed}
 
 /* ── CARRITO PANEL ── */
 .carrito-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
