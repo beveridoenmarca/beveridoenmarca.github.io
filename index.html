@@ -131,6 +131,14 @@ nav{
 }
 .btn-volver:hover{text-decoration:underline;}
 
+/* ESPEJOS */
+.espejo-tam-btn{padding:9px 18px;border-radius:50px;border:1.5px solid var(--bd);background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;color:var(--tx);transition:all .2s}
+.espejo-tam-btn.sel{border-color:var(--verde);background:var(--verde);color:#fff}
+.espejo-mol-card{border:2px solid var(--bd);border-radius:12px;padding:10px;cursor:pointer;transition:all .2s;text-align:center}
+.espejo-mol-card.sel{border-color:var(--verde);box-shadow:0 0 0 3px rgba(42,92,63,.15)}
+.espejo-mol-preview{width:100%;height:36px;border-radius:6px;margin-bottom:8px}
+.espejo-mol-name{font-size:12px;font-weight:600;color:var(--tx)}
+
 /* CARRITO PÁGINA */
 #pagina-carrito{display:none;padding:120px 5% 80px;}
 #pagina-carrito.activa{display:block;}
@@ -803,10 +811,12 @@ footer{
       Tenemos paquetes especiales para cada ocasión. Las promociones de temporada están disponibles únicamente durante su época del año. ¡No te las pierdas!
     </p>
 
-    <!-- Tabs: Temporada / Todo el año -->
+    <!-- Tabs: Temporada / Todo el año / Nuestros Productos / Espejos -->
     <div style="display:flex;gap:12px;margin-bottom:36px;flex-wrap:wrap">
       <button id="tab-temporada" onclick="mostrarTab('temporada')" style="padding:10px 28px;border-radius:50px;border:2px solid var(--verde);background:var(--verde);color:#fff;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">🗓️ De Temporada</button>
       <button id="tab-anio" onclick="mostrarTab('anio')" style="padding:10px 28px;border-radius:50px;border:2px solid var(--verde);background:transparent;color:var(--verde);font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">✨ Todo el Año</button>
+      <button id="tab-productos" onclick="mostrarTab('productos')" style="padding:10px 28px;border-radius:50px;border:2px solid var(--oro,#b8860b);background:transparent;color:var(--oro,#b8860b);font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">🖼️ Nuestros Productos</button>
+      <button id="tab-espejos" onclick="mostrarTab('espejos')" style="padding:10px 28px;border-radius:50px;border:2px solid #555;background:transparent;color:#555;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;transition:all .2s">🪞 Espejos</button>
     </div>
 
     <!-- TEMPORADA -->
@@ -1004,8 +1014,81 @@ footer{
 
       </div>
     </div><!-- fin promo-anio -->
-  </div>
 
+    <!-- NUESTROS PRODUCTOS -->
+    <div id="promo-productos" style="display:none">
+      <div style="background:#fffbf0;border:2px dashed var(--oro,#b8860b);border-radius:16px;padding:48px 32px;text-align:center;color:#7c5c00">
+        <div style="font-size:48px;margin-bottom:16px">🖼️</div>
+        <h3 style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:12px;color:#5a3e00">Nuestros Productos</h3>
+        <p style="font-size:15px;line-height:1.7;max-width:500px;margin:0 auto 24px">Aquí aparecerán los productos terminados disponibles para comprar en línea. Pronto agregaremos el catálogo con fotos y precios.</p>
+        <a href="https://wa.me/522711079327?text=Hola%2C%20me%20interesan%20sus%20productos%20terminados" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--verde);color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:700;font-family:Inter,sans-serif"><i class="ti ti-brand-whatsapp"></i> Consultar disponibilidad</a>
+      </div>
+    </div><!-- fin promo-productos -->
+
+    <!-- ESPEJOS -->
+    <div id="promo-espejos" style="display:none">
+      <h3 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:6px;color:var(--tx)">🪞 Configurador de Espejos</h3>
+      <p style="color:var(--tx2);font-size:14px;margin-bottom:28px">Elige el tamaño y la moldura de tu espejo. Te contactaremos para confirmar tu pedido.</p>
+
+      <!-- Paso 1: Tamaño -->
+      <div style="margin-bottom:28px">
+        <div style="font-weight:700;font-size:14px;color:var(--tx);margin-bottom:12px">1. Tamaño del espejo</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px" id="espejo-tams">
+          <button onclick="selEspejoTam(this,'30×40 cm')" class="espejo-tam-btn">30×40 cm</button>
+          <button onclick="selEspejoTam(this,'40×50 cm')" class="espejo-tam-btn">40×50 cm</button>
+          <button onclick="selEspejoTam(this,'50×60 cm')" class="espejo-tam-btn">50×60 cm</button>
+          <button onclick="selEspejoTam(this,'60×70 cm')" class="espejo-tam-btn">60×70 cm</button>
+          <button onclick="selEspejoTam(this,'70×80 cm')" class="espejo-tam-btn">70×80 cm</button>
+          <button onclick="selEspejoTam(this,'personalizado')" class="espejo-tam-btn" id="espejo-tam-custom">Medida especial…</button>
+        </div>
+        <div id="espejo-custom-wrap" style="display:none;margin-top:12px">
+          <input id="espejo-custom-inp" type="text" placeholder="Ej: 80×100 cm" style="padding:10px 16px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;width:220px">
+        </div>
+      </div>
+
+      <!-- Paso 2: Moldura -->
+      <div style="margin-bottom:28px">
+        <div style="font-weight:700;font-size:14px;color:var(--tx);margin-bottom:12px">2. Moldura</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px" id="espejo-molduras">
+          <div class="espejo-mol-card" onclick="selEspejoMol(this,'Natural Clara','linear-gradient(135deg,#d4a96a,#b8874a)')">
+            <div class="espejo-mol-preview" style="background:linear-gradient(135deg,#d4a96a,#b8874a)"></div>
+            <div class="espejo-mol-name">Natural Clara</div>
+          </div>
+          <div class="espejo-mol-card" onclick="selEspejoMol(this,'Nogal Oscuro','linear-gradient(135deg,#5c3d1e,#3d2610)')">
+            <div class="espejo-mol-preview" style="background:linear-gradient(135deg,#5c3d1e,#3d2610)"></div>
+            <div class="espejo-mol-name">Nogal Oscuro</div>
+          </div>
+          <div class="espejo-mol-card" onclick="selEspejoMol(this,'Negro Mate','linear-gradient(135deg,#222,#444)')">
+            <div class="espejo-mol-preview" style="background:linear-gradient(135deg,#222,#444)"></div>
+            <div class="espejo-mol-name">Negro Mate</div>
+          </div>
+          <div class="espejo-mol-card" onclick="selEspejoMol(this,'Dorado','linear-gradient(135deg,#c9a84c,#f0d060,#c9a84c)')">
+            <div class="espejo-mol-preview" style="background:linear-gradient(135deg,#c9a84c,#f0d060,#c9a84c)"></div>
+            <div class="espejo-mol-name">Dorado</div>
+          </div>
+          <div class="espejo-mol-card" onclick="selEspejoMol(this,'Plateado','linear-gradient(135deg,#aaa,#ddd,#aaa)')">
+            <div class="espejo-mol-preview" style="background:linear-gradient(135deg,#aaa,#ddd,#aaa)"></div>
+            <div class="espejo-mol-name">Plateado</div>
+          </div>
+          <div class="espejo-mol-card" onclick="selEspejoMol(this,'Blanco','linear-gradient(135deg,#f5f5f5,#ddd)')">
+            <div class="espejo-mol-preview" style="background:linear-gradient(135deg,#f5f5f5,#ddd)"></div>
+            <div class="espejo-mol-name">Blanco</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen y botón -->
+      <div id="espejo-resumen" style="display:none;background:#f0f8f4;border-radius:14px;padding:20px;margin-bottom:20px">
+        <div style="font-weight:700;font-size:14px;color:var(--verde);margin-bottom:8px">Tu selección:</div>
+        <div style="font-size:14px;color:var(--tx)">Tamaño: <strong id="espejo-res-tam">—</strong></div>
+        <div style="font-size:14px;color:var(--tx);margin-top:4px">Moldura: <strong id="espejo-res-mol">—</strong></div>
+      </div>
+      <button id="espejo-btn-cotizar" onclick="cotizarEspejo()" style="display:none;width:100%;max-width:360px;padding:14px;background:var(--verde);color:#fff;border:none;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        <i class="ti ti-brand-whatsapp"></i> Cotizar por WhatsApp
+      </button>
+    </div><!-- fin promo-espejos -->
+
+  </div><!-- fin max-width -->
 </div>
 
 <!-- PAGINA PROMOCIONES ARRIBA -->
@@ -1622,17 +1705,58 @@ function navegarA(seccion){
 
 // ===== PROMOCIONES =====
 function mostrarTab(tab){
-  document.getElementById('promo-temporada').style.display = tab==='temporada' ? 'block' : 'none';
-  document.getElementById('promo-anio').style.display = tab==='anio' ? 'block' : 'none';
-  var btnT = document.getElementById('tab-temporada');
-  var btnA = document.getElementById('tab-anio');
-  if(tab==='temporada'){
-    btnT.style.background='var(--verde)'; btnT.style.color='#fff';
-    btnA.style.background='transparent'; btnA.style.color='var(--verde)';
-  } else {
-    btnA.style.background='var(--verde)'; btnA.style.color='#fff';
-    btnT.style.background='transparent'; btnT.style.color='var(--verde)';
-  }
+  ['promo-temporada','promo-anio','promo-productos','promo-espejos'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  var panel=document.getElementById('promo-'+tab);
+  if(panel) panel.style.display='block';
+  // Colores de cada tab
+  var cfg={
+    'temporada':{id:'tab-temporada',on:'var(--verde)',off:'var(--verde)'},
+    'anio':{id:'tab-anio',on:'var(--verde)',off:'var(--verde)'},
+    'productos':{id:'tab-productos',on:'#b8860b',off:'#b8860b'},
+    'espejos':{id:'tab-espejos',on:'#444',off:'#555'}
+  };
+  Object.keys(cfg).forEach(function(t){
+    var b=document.getElementById(cfg[t].id);
+    if(!b) return;
+    if(t===tab){ b.style.background=cfg[t].on; b.style.color='#fff'; b.style.borderColor=cfg[t].on; }
+    else { b.style.background='transparent'; b.style.color=cfg[t].off; b.style.borderColor=cfg[t].off; }
+  });
+}
+
+// ===== ESPEJOS =====
+var _espejoTam='', _espejoMol='';
+function selEspejoTam(btn,tam){
+  document.querySelectorAll('.espejo-tam-btn').forEach(function(b){b.classList.remove('sel');});
+  btn.classList.add('sel');
+  _espejoTam=tam;
+  var wrap=document.getElementById('espejo-custom-wrap');
+  if(tam==='personalizado'){
+    wrap.style.display='block'; _espejoTam='';
+    document.getElementById('espejo-custom-inp').oninput=function(){
+      _espejoTam=this.value.trim(); actualizarResumenEspejo();
+    };
+  } else { wrap.style.display='none'; }
+  actualizarResumenEspejo();
+}
+function selEspejoMol(card,nombre){
+  document.querySelectorAll('.espejo-mol-card').forEach(function(c){c.classList.remove('sel');});
+  card.classList.add('sel'); _espejoMol=nombre; actualizarResumenEspejo();
+}
+function actualizarResumenEspejo(){
+  var res=document.getElementById('espejo-resumen');
+  var btn=document.getElementById('espejo-btn-cotizar');
+  if(_espejoTam||_espejoMol){
+    res.style.display='block';
+    document.getElementById('espejo-res-tam').textContent=_espejoTam||'—';
+    document.getElementById('espejo-res-mol').textContent=_espejoMol||'—';
+  } else { res.style.display='none'; }
+  btn.style.display=(_espejoTam&&_espejoMol)?'block':'none';
+}
+function cotizarEspejo(){
+  var msg='Hola%2C%20quiero%20cotizar%20un%20espejo%3A%0ATama%C3%B1o%3A%20'+encodeURIComponent(_espejoTam)+'%0AMoldura%3A%20'+encodeURIComponent(_espejoMol);
+  window.open('https://wa.me/522711079327?text='+msg,'_blank');
 }
 
 function iniciarPromociones(){
