@@ -177,8 +177,11 @@ body{font-family:Inter,sans-serif;background:#f8f7f4;height:100vh;overflow:hidde
 /* ── BOTTOM BAR ── */
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);padding:12px 16px;z-index:50}
 .resumen-mini{font-size:11px;color:var(--tx2);margin-bottom:8px;min-height:14px;line-height:1.4}
-.btn-carrito-main{width:100%;padding:15px;background:var(--verde);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
+.bottom-btns{display:flex;gap:10px}
+.btn-carrito-main{flex:1;padding:15px;background:var(--verde);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
 .btn-carrito-main:disabled{opacity:.38;cursor:not-allowed}
+.btn-comprar-ahora{flex:1;padding:15px;background:#fff;color:var(--verde);border:2px solid var(--verde);border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
+.btn-comprar-ahora:disabled{opacity:.38;cursor:not-allowed}
 
 /* ── CARRITO PANEL ── */
 .carrito-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
@@ -456,9 +459,33 @@ body{font-family:Inter,sans-serif;background:#f8f7f4;height:100vh;overflow:hidde
 <!-- BOTTOM BAR -->
 <div class="bottom-bar">
   <div class="resumen-mini" id="resumen-mini"></div>
-  <button class="btn-carrito-main" id="btn-carrito" disabled onclick="agregarCarrito()">
-    <i class="ti ti-shopping-cart"></i> Agregar al carrito
-  </button>
+  <div class="bottom-btns">
+    <button class="btn-carrito-main" id="btn-carrito" disabled onclick="agregarCarrito()">
+      <i class="ti ti-shopping-cart"></i> Agregar al carrito
+    </button>
+    <button class="btn-comprar-ahora" id="btn-comprar-ahora" disabled onclick="comprarAhora()">
+      <i class="ti ti-bolt"></i> Comprar ahora
+    </button>
+  </div>
+</div>
+
+<!-- POPUP AGREGADO AL CARRITO -->
+<div id="popup-agregado" style="display:none;position:fixed;inset:0;z-index:600;align-items:center;justify-content:center;background:rgba(0,0,0,.45)">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="width:64px;height:64px;border-radius:50%;background:#E8F2EC;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <i class="ti ti-check" style="font-size:30px;color:var(--verde)"></i>
+    </div>
+    <h3 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1a1a18;margin-bottom:8px">¡Agregado al carrito!</h3>
+    <p style="color:#5a5649;font-size:14px;margin-bottom:28px">Tu marco ha sido agregado exitosamente.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button onclick="popupVerCarrito()" style="background:var(--verde);color:#fff;border:none;border-radius:50px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i class="ti ti-shopping-cart"></i> Ver carrito
+      </button>
+      <button onclick="popupSeguirComprando()" style="background:transparent;color:var(--verde);border:2px solid var(--verde);border-radius:50px;padding:13px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        Seguir comprando
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- CARRITO -->
@@ -795,7 +822,9 @@ function elegirMoldura(btn,nombre,grad){
 function actualizar(){
   var listo = cfg.foto && cfg.tamano && cfg.moldura;
   var btn = document.getElementById('btn-carrito');
+  var btn2 = document.getElementById('btn-comprar-ahora');
   btn.disabled = !listo;
+  if(btn2) btn2.disabled = !listo;
   var mini = document.getElementById('resumen-mini');
   if(listo){
     var t = cfg.tamanoLabel;
@@ -816,7 +845,27 @@ function agregarCarrito(){
   if(!cfg.foto||!cfg.tamano||!cfg.moldura) return;
   carrito.push({id:Date.now(),foto:cfg.foto,tamano:cfg.tamanoLabel,ml:cfg.mlColor,grosor:cfg.mlGrosor,moldura:cfg.moldura});
   actualizarBadge();
+  // Mostrar popup profesional
+  var pop = document.getElementById('popup-agregado');
+  if(pop) pop.style.display='flex';
+}
+
+function comprarAhora(){
+  if(!cfg.foto||!cfg.tamano||!cfg.moldura) return;
+  carrito.push({id:Date.now(),foto:cfg.foto,tamano:cfg.tamanoLabel,ml:cfg.mlColor,grosor:cfg.mlGrosor,moldura:cfg.moldura});
+  actualizarBadge();
   abrirCarrito();
+}
+
+function popupVerCarrito(){
+  var pop = document.getElementById('popup-agregado');
+  if(pop) pop.style.display='none';
+  abrirCarrito();
+}
+
+function popupSeguirComprando(){
+  var pop = document.getElementById('popup-agregado');
+  if(pop) pop.style.display='none';
 }
 
 function actualizarBadge(){
