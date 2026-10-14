@@ -1,0 +1,2233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enmarca tu Foto — Beverido Enmarca</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged, signInWithPopup, signOut,
+           GoogleAuthProvider, FacebookAuthProvider,
+           createUserWithEmailAndPassword, signInWithEmailAndPassword }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB8PSKUp7nL2mOsdFW7tWJbmpvk5b27md8",
+    authDomain: "beverido-4d80a.firebaseapp.com",
+    projectId: "beverido-4d80a",
+    storageBucket: "beverido-4d80a.firebasestorage.app",
+    messagingSenderId: "270167744198",
+    appId: "1:270167744198:web:9f0ada395fe102e02f41c7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+  const facebookProvider = new FacebookAuthProvider();
+  facebookProvider.addScope('email');
+
+  window._fbAuth = auth;
+
+  window.loginGoogle = function(){
+    signInWithPopup(auth, googleProvider).catch(function(e){ mostrarErrorLogin(e); });
+  };
+  window.loginFacebook = function(){
+    signInWithPopup(auth, facebookProvider).catch(function(e){ mostrarErrorLogin(e); });
+  };
+  window.loginEmail = function(){
+    var email = document.getElementById('login-email-inp').value.trim();
+    var pass  = document.getElementById('login-pass-inp').value;
+    var esNuevo = document.getElementById('login-modo').dataset.modo === 'registro';
+    if(!email || !pass){ mostrarErrorLogin({message:'Ingresa correo y contraseña'}); return; }
+    var fn = esNuevo ? createUserWithEmailAndPassword : signInWithEmailAndPassword;
+    fn(auth, email, pass).catch(function(e){ mostrarErrorLogin(e); });
+  };
+  window.cerrarSesion = function(){
+    signOut(auth);
+  };
+
+  onAuthStateChanged(auth, function(user){
+    window._usuarioActual = user || null;
+    window._firebaseListo = true;
+    actualizarUIAuth(user);
+    if(!user && !window._modalBienvenidaMostrado){
+      window._modalBienvenidaMostrado = true;
+      // Mostrar el login de bienvenida 3 segundos después para no bloquear la app al inicio
+      setTimeout(function(){ abrirLoginModal(false, true); }, 3000);
+    }
+    if(user){
+      var nombre = user.displayName || '';
+      var email  = user.email || '';
+      try {
+        var cl = JSON.parse(localStorage.getItem('be_cliente') || '{}');
+        if(!cl.nombre && nombre) cl.nombre = nombre;
+        if(!cl.email  && email)  cl.email  = email;
+        localStorage.setItem('be_cliente', JSON.stringify(cl));
+      } catch(e){}
+      document.getElementById('login-modal').style.display = 'none';
+      if(window._pendienteCheckout){
+        window._pendienteCheckout = false;
+        irCheckout();
+      }
+    }
+  });
+
+  function mostrarErrorLogin(e){
+    var msg = e.message || 'Error desconocido';
+    if(msg.includes('email-already-in-use')) msg = 'Este correo ya tiene cuenta. Inicia sesión.';
+    if(msg.includes('wrong-password') || msg.includes('invalid-credential')) msg = 'Contraseña incorrecta.';
+    if(msg.includes('user-not-found')) msg = 'No existe cuenta con ese correo.';
+    if(msg.includes('weak-password')) msg = 'La contraseña debe tener al menos 6 caracteres.';
+    if(msg.includes('popup-closed')) return;
+    var el = document.getElementById('login-error');
+    if(el){ el.textContent = msg; el.style.display = 'block'; }
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --verde:#2A5C3F;
+  --verde-l:#e8f5ee;
+  --verde-d:#1e4430;
+  --tx:#1a1a1a;
+  --tx2:#666;
+  --bd:#e0e0e0;
+  --bg:#f0ede8;
+  --white:#fff;
+  --shadow-frame:0 8px 32px rgba(0,0,0,.22);
+  --radius:14px;
+}
+html{height:100%}
+body{
+  font-family:Inter,sans-serif;
+  background:var(--bg);
+  height:100%;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+}
+
+/* nav-main eliminado — viene del index.html */
+.cart-badge{display:none}
+
+/* ── SUB-NAV ── */
+.nav-sub{
+  background:var(--white);
+  border-bottom:1px solid var(--bd);
+  padding:8px 16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.nav-back-btn{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  color:var(--tx2);
+  font-size:12px;
+  font-weight:500;
+  cursor:pointer;
+  border:none;
+  background:none;
+  font-family:Inter,sans-serif;
+  padding:4px 0;
+  flex-shrink:0;
+}
+.nav-sub-title{
+  flex:1;
+  text-align:center;
+  font-size:14px;
+  font-weight:600;
+  color:var(--tx);
+}
+.nav-sub-cart{
+  position:relative;
+  flex-shrink:0;
+}
+.nav-sub-cart-btn{
+  background:none;
+  border:none;
+  cursor:pointer;
+  font-size:20px;
+  color:var(--tx);
+  padding:4px;
+  display:flex;
+  align-items:center;
+}
+.cart-badge-sub{
+  display:none;
+  position:absolute;
+  top:-3px;
+  right:-3px;
+  background:var(--verde);
+  color:#fff;
+  border-radius:50%;
+  width:16px;
+  height:16px;
+  font-size:9px;
+  font-weight:700;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ── AUTH BAR ── */
+.auth-bar{
+  background:var(--white);
+  border-bottom:1px solid #f0ede8;
+  padding:7px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:12px;
+  gap:10px;
+  flex-shrink:0;
+}
+.auth-bar-left{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--tx2);
+  flex:1;
+}
+.auth-bar-left strong{color:var(--tx)}
+.auth-avatar{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+.auth-avatar-placeholder{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  background:#e8e8e8;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  flex-shrink:0;
+  color:#999;
+}
+.btn-auth-small{
+  background:none;
+  border:1px solid var(--bd);
+  color:var(--tx2);
+  border-radius:20px;
+  padding:5px 12px;
+  font-size:11px;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  white-space:nowrap;
+  flex-shrink:0;
+  transition:all .15s;
+}
+.btn-auth-small.primary{
+  background:var(--verde);
+  color:#fff;
+  border-color:var(--verde);
+  font-weight:600;
+}
+
+/* ── SCROLL AREA ── */
+.scroll-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ── PREVIEW GRANDE ── */
+.preview-section{
+  background:var(--bg);
+  padding:8px 16px 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:0;
+  flex:1;
+  justify-content:center;
+}
+.preview-stage{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+}
+/* Marco exterior (moldura) */
+.frame-outer{
+  display:inline-block;
+  padding:10px;
+  background:linear-gradient(135deg,#555,#999,#555);
+  border-radius:4px;
+  box-shadow:var(--shadow-frame);
+  transition:all .4s ease;
+}
+/* María Luisa */
+.frame-ml{
+  display:block;
+  padding:0;
+  background:transparent;
+  transition:all .4s ease;
+}
+/* Foto o placeholder */
+.frame-foto{
+  display:block;
+  width:240px;
+  height:300px;
+  object-fit:cover;
+  vertical-align:bottom;
+  border-radius:1px;
+  transition:all .4s;
+}
+.frame-placeholder{
+  width:240px;
+  height:300px;
+  background:#fff;
+  border-radius:1px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  cursor:pointer;
+  transition:all .3s;
+  border:none;
+  padding:0;
+}
+.frame-placeholder:active{background:#f5f5f5}
+.frame-placeholder i{
+  font-size:28px;
+  color:#bbb;
+}
+.frame-placeholder span{
+  font-size:10px;
+  color:#bbb;
+  font-family:Inter,sans-serif;
+  letter-spacing:.3px;
+}
+/* Etiqueta de tamaño abajo del preview */
+.preview-label{
+  margin-top:6px;
+  font-size:11px;
+  color:var(--tx2);
+  text-align:center;
+  min-height:14px;
+  letter-spacing:.2px;
+}
+
+/* ── GRID SELECTORES 2×2 ── */
+.selectors-section{
+  padding:0 14px 10px;
+  flex-shrink:0;
+  overflow:visible;
+}
+.selectors-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.selector-card{
+  background:var(--white);
+  border:2px solid var(--bd);
+  border-radius:var(--radius);
+  padding:8px 12px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+  overflow:hidden;
+  justify-content:center;
+  min-height:58px;
+  user-select:none;
+  /* transición solo en propiedades visuales, no en transform (evita lag táctil) */
+  transition:border-color .12s, background .12s, box-shadow .12s;
+}
+/* Tap feedback inmediato y claro */
+.selector-card:active{
+  background:#dff0e8;
+  border-color:var(--verde);
+  box-shadow:0 0 0 3px rgba(42,92,63,.18);
+}
+/* Estado seleccionado */
+.selector-card.done{
+  border-color:var(--verde);
+  background:#f0faf5;
+}
+.selector-card.done::after{
+  content:'✓';
+  position:absolute;
+  top:9px;
+  right:11px;
+  font-size:12px;
+  color:var(--verde);
+  font-weight:700;
+}
+.selector-icon{
+  font-size:18px;
+  color:#bbb;
+  transition:color .15s;
+}
+.selector-card.done .selector-icon{color:var(--verde)}
+.selector-label{
+  font-size:10px;
+  font-weight:700;
+  color:var(--tx2);
+  letter-spacing:.1px;
+}
+.selector-val{
+  font-size:11px;
+  font-weight:500;
+  color:var(--tx);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:1.3;
+}
+.selector-val.placeholder{
+  color:#bbb;
+  font-weight:400;
+}
+/* ML igual tamaño que las demás */
+#card-ml .selector-info{display:contents}
+
+/* ── BOTONES DE COMPRA ── */
+.btn-carrito{
+  padding:14px 10px;
+  background:var(--white);
+  color:var(--verde);
+  border:2px solid var(--verde);
+  border-radius:10px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:all .18s;
+  -webkit-tap-highlight-color:transparent;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  box-shadow:0 2px 8px rgba(42,92,63,.12);
+}
+.btn-carrito:disabled{
+  color:#c8c8c8;
+  border-color:#e0e0e0;
+  background:#f5f5f5;
+  box-shadow:none;
+  cursor:not-allowed;
+}
+.btn-carrito:not(:disabled):active{background:var(--verde-l)}
+.btn-comprar{
+  padding:14px 10px;
+  background:var(--verde);
+  color:#fff;
+  border:2px solid var(--verde);
+  border-radius:10px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:all .18s;
+  -webkit-tap-highlight-color:transparent;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  box-shadow:0 2px 10px rgba(42,92,63,.28);
+}
+.btn-comprar:disabled{
+  background:#e0e0e0;
+  border-color:#e0e0e0;
+  color:#bbb;
+  box-shadow:none;
+  cursor:not-allowed;
+}
+.btn-comprar:not(:disabled):active{background:var(--verde-d)}
+
+/* ── COMPRA BAR — sticky al fondo, siempre visible ── */
+.compra-bar{
+  position:sticky;
+  bottom:0;
+  z-index:10;
+  background:var(--white);
+  border-top:2px solid var(--bd);
+  padding:10px 14px;
+  padding-bottom:max(80px,env(safe-area-inset-bottom));
+  box-shadow:0 -2px 12px rgba(0,0,0,.07);
+}
+.action-hint{
+  font-size:11px;
+  color:#999;
+  text-align:center;
+  min-height:13px;
+  margin-bottom:7px;
+  letter-spacing:.01em;
+}
+.compra-btns{
+  display:grid;
+  grid-template-columns:1fr 1.5fr;
+  gap:10px;
+}
+
+/* ── BOTTOM SHEET ── */
+.sheet-overlay{
+  display:none;
+  position:fixed;
+  top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,.45);
+  z-index:500;
+  align-items:flex-end;
+  /* iOS Safari: asegurar que cubre todo */
+  -webkit-overflow-scrolling:touch;
+}
+.sheet-overlay.active{display:flex}
+.sheet{
+  background:var(--white);
+  width:100%;
+  border-radius:20px 20px 0 0;
+  /* Altura fija: ocupa casi toda la pantalla para que todo se vea */
+  height:82%;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  transform:translateY(100%);
+  transition:transform .28s cubic-bezier(.32,.72,0,1);
+}
+.sheet-overlay.active .sheet{
+  transform:translateY(0);
+}
+/* El body del sheet hace scroll, no el sheet completo */
+.sheet-body{
+  flex:1;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:16px 20px max(24px, env(safe-area-inset-bottom));
+}
+.sheet-handle{
+  width:36px;
+  height:4px;
+  background:#ddd;
+  border-radius:2px;
+  margin:12px auto 0;
+}
+.sheet-header{
+  padding:14px 20px 12px;
+  display:flex;
+  align-items:center;
+  position:sticky;
+  top:0;
+  justify-content:space-between;
+  border-bottom:1px solid #f0f0f0;
+}
+.sheet-title{
+  font-family:'Playfair Display',serif;
+  font-size:18px;
+  font-weight:700;
+  color:var(--tx);
+}
+.sheet-close{
+  background:none;
+  border:none;
+  font-size:22px;
+  color:#999;
+  cursor:pointer;
+  padding:2px 4px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+}
+
+/* ── SHEET: FOTO PICKER ── */
+.foto-pick-btn{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  width:100%;
+  padding:18px 16px;
+  border:none;
+  background:none;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  font-size:15px;
+  font-weight:500;
+  color:var(--tx);
+  border-bottom:1px solid #f0f0f0;
+  -webkit-tap-highlight-color:transparent;
+  text-align:left;
+  transition:background .12s;
+}
+.foto-pick-btn:last-child{border-bottom:none}
+.foto-pick-btn:active{background:#f5f5f5}
+.foto-pick-btn i{font-size:22px;color:var(--tx2);flex-shrink:0;width:28px;text-align:center}
+.foto-elegida-row{
+  display:none;
+  align-items:center;
+  gap:14px;
+  background:#f0f8f4;
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:12px;
+}
+.foto-elegida-row img{
+  width:52px;
+  height:64px;
+  object-fit:cover;
+  border-radius:8px;
+  flex-shrink:0;
+}
+.foto-elegida-info{flex:1;min-width:0}
+.foto-elegida-info strong{
+  display:block;
+  font-size:13px;
+  color:var(--verde);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-bottom:2px;
+}
+.foto-elegida-info span{font-size:11px;color:#666}
+.btn-foto-cambiar{
+  background:none;
+  border:1.5px solid var(--verde);
+  color:var(--verde);
+  border-radius:20px;
+  font-size:11px;
+  padding:5px 12px;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  flex-shrink:0;
+  font-weight:600;
+}
+
+/* ── SHEET: TAMAÑO ── */
+.size-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.size-btn{
+  padding:16px 12px;
+  border:1.5px solid var(--bd);
+  border-radius:12px;
+  background:var(--white);
+  cursor:pointer;
+  text-align:left;
+  transition:all .2s;
+  font-family:Inter,sans-serif;
+  -webkit-tap-highlight-color:transparent;
+}
+.size-btn.on{border-color:var(--verde);background:var(--verde-l)}
+.size-btn strong{
+  display:block;
+  font-size:14px;
+  color:var(--tx);
+  font-weight:700;
+  margin-bottom:2px;
+}
+.size-btn span{font-size:11px;color:var(--tx2)}
+
+/* ── SHEET: ML ── */
+.ml-options{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.ml-btn{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border:1.5px solid var(--bd);
+  border-radius:12px;
+  background:var(--white);
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.ml-btn.on{border-color:var(--verde);background:var(--verde-l)}
+.ml-color-dot{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  border:1.5px solid #ccc;
+  flex-shrink:0;
+}
+.ml-btn-info{text-align:left}
+.ml-btn-info strong{
+  display:block;
+  font-size:13px;
+  color:var(--tx);
+  font-weight:600;
+}
+.ml-btn-info span{font-size:11px;color:var(--tx2)}
+.grosor-sect{
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid #f0f0f0;
+  display:none;
+}
+.grosor-label-txt{
+  font-size:12px;
+  font-weight:600;
+  color:var(--tx2);
+  margin-bottom:10px;
+}
+.grosor-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.grosor-btn{
+  padding:8px 18px;
+  border:1.5px solid var(--bd);
+  border-radius:20px;
+  background:var(--white);
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  font-size:12px;
+  font-weight:500;
+  transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.grosor-btn.on{
+  border-color:var(--verde);
+  background:var(--verde-l);
+  color:var(--verde);
+  font-weight:700;
+}
+
+/* ── SHEET: MOLDURA ── */
+.moldura-options{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.moldura-btn{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border:1.5px solid var(--bd);
+  border-radius:12px;
+  background:var(--white);
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.moldura-btn.on{border-color:var(--verde);background:var(--verde-l)}
+.moldura-swatch{
+  width:40px;
+  height:40px;
+  border-radius:8px;
+  flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+}
+.moldura-btn-info{text-align:left}
+.moldura-btn-info strong{
+  display:block;
+  font-size:13px;
+  color:var(--tx);
+  font-weight:600;
+}
+.moldura-btn-info span{font-size:11px;color:var(--tx2)}
+
+/* ── CHECKOUT ── */
+.checkout-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.65);
+  z-index:9999;
+  overflow-y:auto;
+  padding:8px 12px max(80px,env(safe-area-inset-bottom));
+  box-sizing:border-box;
+  display:none;
+  align-items:flex-start;
+  justify-content:center;
+}
+.checkout-overlay.active{display:flex!important}
+.checkout-box{
+  background:#fff;
+  border-radius:20px;
+  width:100%;
+  max-width:520px;
+  margin:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.3);
+  flex-shrink:0;
+}
+.checkout-header{
+  background:var(--verde);
+  padding:22px 28px 20px;
+  color:#fff;
+  border-radius:20px 20px 0 0;
+  position:relative;
+}
+.checkout-close-btn{
+  position:absolute;
+  top:14px;
+  right:16px;
+  background:rgba(255,255,255,.15);
+  border:none;
+  color:#fff;
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  font-size:16px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:Inter,sans-serif;
+}
+.checkout-steps{
+  display:flex;
+  align-items:flex-start;
+  margin-top:18px;
+  gap:0;
+}
+.step-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-width:56px;
+}
+.step-circle{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  font-size:13px;
+  flex-shrink:0;
+}
+.step-line{flex:1;height:2px;background:rgba(255,255,255,.3);margin-top:14px}
+.step-label{font-size:11px;margin-top:5px;font-weight:600;text-align:center;white-space:nowrap}
+.checkout-body{padding:28px 28px 24px}
+.form-group{margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--tx2);display:block;margin-bottom:5px}
+.form-group input,.form-group select{
+  width:100%;
+  padding:12px 14px;
+  border:1.5px solid var(--bd);
+  border-radius:10px;
+  font-size:14px;
+  font-family:Inter,sans-serif;
+  box-sizing:border-box;
+  transition:border-color .2s;
+  background:#fff;
+}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--verde)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-sig{
+  width:100%;
+  padding:14px;
+  background:var(--verde);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  margin-top:16px;
+}
+.btn-ant{
+  flex:1;
+  padding:14px;
+  background:#f5f5f5;
+  color:var(--tx);
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+}
+.btns-row{display:flex;gap:10px;margin-top:16px}
+.pago-opt{
+  padding:14px 18px;
+  border:1.5px solid var(--bd);
+  border-radius:12px;
+  background:#fff;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  text-align:left;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  margin-bottom:10px;
+  transition:all .2s;
+}
+.pago-opt:hover,.pago-opt.on{border-color:var(--verde);background:var(--verde-l)}
+.pago-opt-title{font-weight:600;font-size:14px;color:var(--tx)}
+.pago-opt-sub{font-size:12px;color:var(--tx2)}
+.transferencia-info{
+  background:#f0f7f4;
+  border:1.5px solid var(--verde);
+  border-radius:12px;
+  padding:16px;
+  margin-bottom:14px;
+  display:none;
+  font-size:13px;
+  color:var(--tx);
+  line-height:2;
+}
+.confirmacion{text-align:center;padding:20px 0;display:none}
+.entrega-opt{
+  padding:14px 10px;
+  border:1.5px solid var(--bd);
+  border-radius:14px;
+  background:#fff;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  transition:all .2s;
+  color:var(--tx);
+}
+.entrega-opt:active,.entrega-opt.on{border-color:var(--verde);background:var(--verde-l)}
+.entrega-opt strong{font-size:13px;color:var(--tx)}
+.entrega-opt span{font-size:11px;color:var(--tx2)}
+.sucursal-opt{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border:1.5px solid var(--bd);
+  border-radius:14px;
+  background:#fff;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  width:100%;
+  transition:all .2s;
+}
+.sucursal-opt:active,.sucursal-opt.on{border-color:var(--verde);background:var(--verde-l)}
+
+/* ── CARRITO PANEL ── */
+.carrito-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
+.carrito-panel{
+  display:none;
+  position:fixed;
+  top:0;right:0;bottom:0;
+  width:min(100%,420px);
+  background:#fff;
+  z-index:201;
+  box-shadow:-4px 0 32px rgba(0,0,0,.15);
+  overflow:hidden;
+  flex-direction:column;
+}
+.carrito-header{padding:20px 20px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.carrito-items{padding:16px 20px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.carrito-footer{
+  padding:16px 20px;
+  padding-bottom:max(80px,env(safe-area-inset-bottom));
+  border-top:1px solid #eee;
+  flex-shrink:0;
+  background:#fff;
+}
+.btn-pagar{width:100%;padding:14px;background:var(--verde);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif}
+.carrito-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f5f5f5;align-items:flex-start}
+.carrito-item img{width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.ci-info{flex:1;min-width:0;font-size:12px;color:var(--tx);line-height:1.7}
+.ci-info strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-desc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx2)}
+.ci-precio{font-size:13px;font-weight:700;color:var(--verde);margin-top:4px}
+.ci-del{background:none;border:none;color:#cc3333;cursor:pointer;font-size:16px;padding:4px}
+
+/* ── POPUP AGREGADO ── */
+.popup-agregado{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:600;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.45);
+}
+
+/* ── LOGIN MODAL ── */
+.login-modal-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  z-index:10000;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.login-modal-overlay.active{display:flex}
+.login-box{
+  background:#fff;
+  border-radius:20px;
+  width:100%;
+  max-width:400px;
+  padding:28px 24px;
+  position:relative;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.login-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--tx);margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--tx2);margin-bottom:24px;line-height:1.5}
+.btn-social{
+  width:100%;
+  padding:13px;
+  border:1.5px solid var(--bd);
+  border-radius:12px;
+  background:#fff;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin-bottom:10px;
+  transition:all .2s;
+  color:var(--tx);
+}
+.login-divider{text-align:center;color:#bbb;font-size:12px;margin:14px 0;position:relative}
+.login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#eee}
+.login-divider::before{left:0}.login-divider::after{right:0}
+.login-input{
+  width:100%;
+  padding:12px 14px;
+  border:1.5px solid var(--bd);
+  border-radius:10px;
+  font-size:14px;
+  font-family:Inter,sans-serif;
+  box-sizing:border-box;
+  margin-bottom:10px;
+  transition:border-color .2s;
+}
+.login-input:focus{outline:none;border-color:var(--verde)}
+.btn-login-email{
+  width:100%;
+  padding:13px;
+  background:var(--verde);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  font-family:Inter,sans-serif;
+  margin-top:4px;
+}
+.login-toggle{text-align:center;font-size:12px;color:var(--tx2);margin-top:14px}
+.login-toggle span{color:var(--verde);cursor:pointer;font-weight:600}
+.login-error{
+  display:none;
+  background:#fff0f0;
+  border:1px solid #ffcccc;
+  color:#cc3333;
+  border-radius:8px;
+  padding:10px 12px;
+  font-size:12px;
+  margin-bottom:12px;
+}
+.login-skip{text-align:center;margin-top:16px}
+.login-skip button{background:none;border:none;color:var(--tx2);font-size:12px;cursor:pointer;font-family:Inter,sans-serif;text-decoration:underline}
+
+/* ── RESPONSIVE pequeñas ── */
+@media(max-height:750px){
+  .frame-foto,.frame-placeholder{width:200px;height:250px}
+}
+@media(max-height:680px){
+  .preview-section{padding:4px 16px 2px}
+  .frame-foto,.frame-placeholder{width:160px;height:200px}
+  .frame-outer{padding:7px}
+  .preview-stage{min-height:140px}
+  .selectors-section{padding:0 12px 4px}
+  .selector-card{min-height:48px;padding:6px 10px}
+  .nav-sub{padding:5px 16px}
+  .auth-bar{padding:4px 16px}
+  .compra-bar{padding:7px 14px}
+  .action-hint{margin-bottom:4px;min-height:10px}
+}
+@media(max-height:580px){
+  .frame-foto,.frame-placeholder{width:100px;height:125px}
+  .preview-section{padding:2px 16px 0}
+  .selector-card{min-height:44px;padding:5px 10px}
+  .selectors-section{padding:0 10px 2px}
+}
+</style>
+</head>
+<body>
+
+<!-- SUB-NAV -->
+<nav class="nav-sub">
+  <button class="nav-back-btn" onclick="try{window.parent.history.back()}catch(e){window.history.back()}">
+    <i class="ti ti-arrow-left" style="font-size:14px"></i> Volver
+  </button>
+  <span class="nav-sub-title">Enmarca tu Foto</span>
+  <div class="nav-sub-cart">
+    <button class="nav-sub-cart-btn" onclick="abrirCarrito()">
+      <i class="ti ti-shopping-cart" style="font-size:19px"></i>
+    </button>
+    <span class="cart-badge-sub" id="cart-badge-sub">0</span>
+  </div>
+</nav>
+
+<!-- AUTH BAR -->
+<div class="auth-bar" id="auth-bar">
+  <div class="auth-bar-left" id="auth-bar-left">
+    <div class="auth-avatar-placeholder"><i class="ti ti-user" style="font-size:13px"></i></div>
+    <span id="auth-bar-msg">¿Ya eres cliente? <strong>Inicia sesión</strong></span>
+  </div>
+  <button class="btn-auth-small primary" id="auth-bar-btn" onclick="abrirLoginModal()">Iniciar sesión</button>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="login-modal-overlay" id="login-modal" onclick="if(event.target===this)cerrarLoginModal()">
+  <div class="login-box">
+    <button onclick="cerrarLoginModal()" id="login-close-btn" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:20px;color:#999;cursor:pointer;line-height:1;padding:4px">✕</button>
+    <div class="login-title">Bienvenido 👋</div>
+    <div class="login-sub" id="login-sub">Inicia sesión para guardar tus datos y hacer pedidos más rápido.</div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn-social" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20" height="20">
+      Continuar con Google
+    </button>
+    <button class="btn-social" style="background:#1877F2;color:#fff;border-color:#1877F2" onclick="loginFacebook()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.235 2.686.235v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+      Continuar con Facebook
+    </button>
+    <div class="login-divider">o con correo</div>
+    <div id="login-modo" data-modo="login">
+      <input class="login-input" type="email" id="login-email-inp" placeholder="Correo electrónico">
+      <input class="login-input" type="password" id="login-pass-inp" placeholder="Contraseña (mín. 6 caracteres)">
+      <button class="btn-login-email" onclick="loginEmail()" id="login-email-btn">Iniciar sesión</button>
+      <div class="login-toggle">¿No tienes cuenta? <span onclick="toggleLoginModo()">Regístrate</span></div>
+    </div>
+    <div class="login-skip" id="login-skip-btn">
+      <button onclick="saltarLogin()">Continuar sin cuenta →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCROLL AREA -->
+<div class="scroll-area">
+
+  <!-- PREVIEW GRANDE -->
+  <div class="preview-section">
+    <div class="preview-stage">
+      <div class="frame-outer" id="frame-outer">
+        <div class="frame-ml-inner" id="frame-ml">
+          <!-- Si no hay foto: placeholder clicable -->
+          <button class="frame-placeholder" id="frame-placeholder" onclick="document.getElementById('file-inp').click()">
+            <i class="ti ti-photo-plus"></i>
+            <span>Subir foto</span>
+          </button>
+          <!-- Foto subida -->
+          <img class="frame-foto" id="preview-foto" src="" alt="Tu foto" style="display:none">
+        </div>
+      </div>
+    </div>
+    <div class="preview-label" id="preview-label">Sube tu foto y configura tu marco</div>
+  </div>
+
+  <!-- GRID SELECTORES (boceto: foto izq 2 filas / tamaño+moldura der / ML abajo full) -->
+  <div class="selectors-section">
+    <div class="selectors-grid">
+
+      <!-- Foto (2 filas, izquierda) -->
+      <div class="selector-card" id="card-foto" onclick="document.getElementById('file-inp').click()">
+        <i class="ti ti-photo-plus selector-icon" id="icon-foto"></i>
+        <div class="selector-label">Foto</div>
+        <div class="selector-val placeholder" id="val-foto">Toca para subir tu foto</div>
+      </div>
+
+      <!-- Tamaño (arriba derecha) -->
+      <div class="selector-card" id="card-tamano" onclick="abrirSheet('tamano')">
+        <i class="ti ti-ruler-2 selector-icon" id="icon-tamano"></i>
+        <div class="selector-label">Tamaño</div>
+        <div class="selector-val placeholder" id="val-tamano">Elige tamaño</div>
+      </div>
+
+      <!-- Moldura (abajo derecha) -->
+      <div class="selector-card" id="card-moldura" onclick="abrirSheet('moldura')">
+        <i class="ti ti-frame selector-icon" id="icon-moldura"></i>
+        <div class="selector-label">Moldura</div>
+        <div class="selector-val placeholder" id="val-moldura">Elige moldura</div>
+      </div>
+
+      <!-- María Luisa (ancho completo, fila 3) -->
+      <div class="selector-card" id="card-ml" onclick="abrirSheet('ml')">
+        <i class="ti ti-border-outer selector-icon" id="icon-ml"></i>
+        <div class="selector-info">
+          <div class="selector-label">María Luisa</div>
+          <div class="selector-val placeholder" id="val-ml">Elige margen decorativo</div>
+        </div>
+      </div>
+
+    </div><!-- /selectors-grid -->
+  </div><!-- /selectors-section -->
+
+</div><!-- /scroll-area -->
+
+<!-- BOTONES — hijo directo del body (flex-column), siempre al fondo, nunca cortados -->
+<div class="compra-bar">
+  <div id="bottom-hint" class="action-hint"></div>
+  <div class="compra-btns">
+    <button class="btn-carrito" id="btn-carrito" disabled onclick="agregarCarrito()">
+      <i class="ti ti-shopping-cart"></i> Al carrito
+    </button>
+    <button class="btn-comprar" id="btn-comprar" disabled onclick="comprarAhora()">
+      <i class="ti ti-bolt"></i> Comprar ahora
+    </button>
+  </div>
+</div>
+
+<!-- Input de foto fuera de cualquier elemento oculto (iOS Safari requiere esto) -->
+<input type="file" id="file-inp" accept="image/*" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0">
+
+<!-- ──────── BOTTOM SHEETS ──────── -->
+
+<!-- SHEET: FOTO — solo muestra la foto elegida (el input ya no vive aquí) -->
+<div class="sheet-overlay" id="sheet-foto" onclick="cerrarSheetOverlay(event,'sheet-foto')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Tu Foto</div>
+      <button class="sheet-close" onclick="cerrarSheet('foto')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="sheet-body">
+      <!-- Foto ya elegida -->
+      <div class="foto-elegida-row" id="foto-elegida-row">
+        <img id="foto-thumb" src="" alt="">
+        <div class="foto-elegida-info">
+          <strong id="foto-nombre-card">foto.jpg</strong>
+          <span>Foto seleccionada ✓</span>
+        </div>
+        <button class="btn-foto-cambiar" onclick="document.getElementById('file-inp').click()">Cambiar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: TAMAÑO -->
+<div class="sheet-overlay" id="sheet-tamano" onclick="cerrarSheetOverlay(event,'sheet-tamano')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Tamaño del Marco</div>
+      <button class="sheet-close" onclick="cerrarSheet('tamano')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="size-grid">
+        <button class="size-btn" onclick="elegirTamano(this,'30x40','30 × 40 cm','Pequeño',96,120)">
+          <strong>30 × 40 cm</strong><span>Pequeño</span>
+        </button>
+        <button class="size-btn" onclick="elegirTamano(this,'40x50','40 × 50 cm','Mediano',96,120)">
+          <strong>40 × 50 cm</strong><span>Mediano</span>
+        </button>
+        <button class="size-btn" onclick="elegirTamano(this,'50x60','50 × 60 cm','Grande',110,138)">
+          <strong>50 × 60 cm</strong><span>Grande</span>
+        </button>
+        <button class="size-btn" onclick="elegirTamano(this,'60x70','60 × 70 cm','Extra grande',110,130)">
+          <strong>60 × 70 cm</strong><span>Extra grande</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: MARÍA LUISA -->
+<div class="sheet-overlay" id="sheet-ml" onclick="cerrarSheetOverlay(event,'sheet-ml')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">María Luisa</div>
+      <button class="sheet-close" onclick="cerrarSheet('ml')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="ml-options">
+        <button class="ml-btn" onclick="elegirML(this,'Blanco','#fff','#ccc')">
+          <span class="ml-color-dot" style="background:#fff;border-color:#ccc"></span>
+          <div class="ml-btn-info"><strong>Blanco</strong><span>Clásico y elegante</span></div>
+        </button>
+        <button class="ml-btn" onclick="elegirML(this,'Beige','#f5f0e8','#d4c5a9')">
+          <span class="ml-color-dot" style="background:#f5f0e8;border-color:#d4c5a9"></span>
+          <div class="ml-btn-info"><strong>Beige</strong><span>Calidez natural</span></div>
+        </button>
+        <button class="ml-btn" onclick="elegirML(this,'Negro','#111','#111')">
+          <span class="ml-color-dot" style="background:#111;border-color:#111"></span>
+          <div class="ml-btn-info"><strong>Negro</strong><span>Moderno y dramático</span></div>
+        </button>
+        <button class="ml-btn" onclick="elegirML(this,'Sin margen','none','none')">
+          <span class="ml-color-dot" style="background:repeating-linear-gradient(45deg,#eee,#eee 3px,#fff 3px,#fff 6px);border-color:#ccc"></span>
+          <div class="ml-btn-info"><strong>Sin margen</strong><span>Directo a la moldura</span></div>
+        </button>
+      </div>
+      <!-- Grosor -->
+      <div class="grosor-sect" id="grosor-sect">
+        <div class="grosor-label-txt">Grosor del margen:</div>
+        <div class="grosor-row">
+          <button class="grosor-btn" onclick="elegirGrosor(this,'3 cm',4)">3 cm</button>
+          <button class="grosor-btn" onclick="elegirGrosor(this,'6 cm',8)">6 cm</button>
+          <button class="grosor-btn" onclick="elegirGrosor(this,'Sin grosor',0)">Sin grosor</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: MOLDURA -->
+<div class="sheet-overlay" id="sheet-moldura" onclick="cerrarSheetOverlay(event,'sheet-moldura')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Moldura</div>
+      <button class="sheet-close" onclick="cerrarSheet('moldura')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="moldura-options">
+        <button class="moldura-btn" onclick="elegirMoldura(this,'Negro','linear-gradient(135deg,#1a1a1a,#444,#1a1a1a)')">
+          <div class="moldura-swatch" style="background:linear-gradient(135deg,#1a1a1a,#444,#1a1a1a)"></div>
+          <div class="moldura-btn-info"><strong>Negro</strong><span>Elegante y atemporal</span></div>
+        </button>
+        <button class="moldura-btn" onclick="elegirMoldura(this,'Blanco','linear-gradient(135deg,#ddd,#fff,#ddd)')">
+          <div class="moldura-swatch" style="background:linear-gradient(135deg,#ddd,#fff,#ddd);border:1px solid #ccc"></div>
+          <div class="moldura-btn-info"><strong>Blanco</strong><span>Limpio y minimalista</span></div>
+        </button>
+        <button class="moldura-btn" onclick="elegirMoldura(this,'Dorado','linear-gradient(135deg,#8B6914,#C9A84C,#8B6914)')">
+          <div class="moldura-swatch" style="background:linear-gradient(135deg,#8B6914,#C9A84C,#8B6914)"></div>
+          <div class="moldura-btn-info"><strong>Dorado</strong><span>Lujo y distinción</span></div>
+        </button>
+        <button class="moldura-btn" onclick="elegirMoldura(this,'Madera','linear-gradient(135deg,#6B3A2A,#A0522D,#6B3A2A)')">
+          <div class="moldura-swatch" style="background:linear-gradient(135deg,#6B3A2A,#A0522D,#6B3A2A)"></div>
+          <div class="moldura-btn-info"><strong>Madera</strong><span>Natural y cálida</span></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP AGREGADO AL CARRITO -->
+<div class="popup-agregado" id="popup-agregado">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="width:64px;height:64px;border-radius:50%;background:#E8F2EC;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <i class="ti ti-check" style="font-size:30px;color:var(--verde)"></i>
+    </div>
+    <h3 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1a1a18;margin-bottom:8px">¡Agregado al carrito!</h3>
+    <p style="color:#5a5649;font-size:14px;margin-bottom:28px">Tu marco ha sido agregado exitosamente.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="popupPagar()" style="background:var(--verde);color:#fff;border:none;border-radius:50px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i class="ti ti-lock"></i> Proceder al pago
+      </button>
+      <button onclick="popupVerCarrito()" style="background:transparent;color:var(--verde);border:2px solid var(--verde);border-radius:50px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i class="ti ti-shopping-cart"></i> Ver carrito
+      </button>
+      <button onclick="popupSeguirComprando()" style="background:transparent;color:#999;border:none;padding:8px;font-size:13px;cursor:pointer;font-family:Inter,sans-serif">
+        Seguir comprando
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CARRITO PANEL (local — no se usa, todo va por postMessage) -->
+<div class="carrito-overlay" id="carrito-overlay" onclick="cerrarCarrito()"></div>
+<div class="carrito-panel" id="carrito-panel" style="display:none">
+  <div class="carrito-header">
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700">Tu Carrito</div>
+    <button onclick="cerrarCarrito()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#666;padding:4px 8px"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="carrito-items" id="carrito-items"></div>
+  <div class="carrito-footer" id="carrito-footer" style="display:none">
+    <button class="btn-pagar" onclick="cerrarCarrito();irCheckout();" style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px">
+      <i class="ti ti-lock"></i> Proceder al pago
+    </button>
+  </div>
+</div>
+
+<!-- CHECKOUT (local — backup; el real está en index.html vía postMessage) -->
+<div class="checkout-overlay" id="checkout-overlay">
+  <div class="checkout-box">
+    <div class="checkout-header">
+      <div style="font-size:21px;font-weight:700;font-family:'Playfair Display',serif">Finalizar Pedido</div>
+      <button class="checkout-close-btn" onclick="cerrarCheckout()" title="Cerrar">✕</button>
+      <div class="checkout-steps">
+        <div class="step-item"><div class="step-circle" id="sc1" style="background:#fff;color:var(--verde)">1</div><div class="step-label">Datos</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle" id="sc2" style="background:rgba(255,255,255,.3);color:#fff">2</div><div class="step-label">Entrega</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle" id="sc3" style="background:rgba(255,255,255,.3);color:#fff">3</div><div class="step-label">Pago</div></div>
+      </div>
+    </div>
+    <div class="checkout-body">
+      <div id="cp1">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Tus datos</div>
+        <div class="form-group"><label>Nombre completo *</label><input type="text" id="co-nombre" placeholder="Tu nombre completo"></div>
+        <div class="form-group"><label>Correo electrónico *</label><input type="email" id="co-email" placeholder="tu@correo.com"></div>
+        <div class="form-group"><label>Teléfono (WhatsApp) *</label><input type="tel" id="co-tel" placeholder="10 dígitos" maxlength="10"></div>
+        <div style="background:#f8f8f8;border-radius:10px;padding:12px;font-size:12px;color:#666;display:flex;align-items:center;gap:6px"><i class="ti ti-lock" style="color:var(--verde)"></i>Tus datos se guardan de forma segura.</div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="cerrarCheckout()">✕ Cancelar</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" onclick="validarPaso1()">Continuar →</button>
+        </div>
+      </div>
+      <div id="cp2" style="display:none">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:14px">¿Cómo recibes tu pedido?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+          <button class="entrega-opt on" id="opt-envio" onclick="elegirEntrega('envio')">
+            <i class="ti ti-truck" style="font-size:22px;display:block;margin-bottom:6px"></i>
+            <strong>Envío a domicilio</strong><span>Lo recibas en casa</span>
+          </button>
+          <button class="entrega-opt" id="opt-sucursal" onclick="elegirEntrega('sucursal')">
+            <i class="ti ti-building-store" style="font-size:22px;display:block;margin-bottom:6px"></i>
+            <strong>Recoger en tienda</strong><span>Sin costo extra</span>
+          </button>
+        </div>
+        <div id="seccion-envio">
+          <div style="background:#fff8e6;border:1px solid #f0d080;border-radius:10px;padding:10px 14px;font-size:12px;color:#8a6000;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <i class="ti ti-clock" style="font-size:16px"></i> Tiempo estimado: <strong>10–15 días hábiles</strong>
+          </div>
+          <div class="form-group"><label>Calle y número *</label><input type="text" id="co-calle" placeholder="Calle, número exterior e interior"></div>
+          <div class="form-group" id="colonia-group">
+            <label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu CP para ver colonias">
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Ciudad *</label><input type="text" id="co-ciudad" placeholder="Se llena con el CP"></div>
+            <div class="form-group" style="position:relative">
+              <label>C.P. *</label>
+              <input type="text" id="co-cp" placeholder="Código postal" maxlength="5" oninput="buscarCP(this.value)">
+              <span id="cp-spinner" style="display:none;position:absolute;right:12px;bottom:14px;font-size:14px;color:#999">🔍</span>
+              <span id="cp-ok" style="display:none;position:absolute;right:12px;bottom:14px;color:var(--verde);font-size:16px">✓</span>
+            </div>
+          </div>
+          <div id="cp-error" style="display:none;font-size:12px;color:#cc3333;margin-top:-8px;margin-bottom:8px">CP no encontrado. Escribe tus datos manualmente.</div>
+          <div class="form-group"><label>Estado *</label><input type="text" id="co-estado" placeholder="Se llena con el CP"></div>
+          <div class="form-group"><label>Referencias (opcional)</label><input type="text" id="co-ref" placeholder="Entre calles, color de casa, etc."></div>
+        </div>
+        <div id="seccion-sucursal" style="display:none">
+          <div style="background:#e8f5ee;border:1px solid #b8dbc9;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--verde);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <i class="ti ti-tag" style="font-size:16px"></i>
+            <strong>¡Sin costo de envío!</strong> Tu marco estará listo en 10–15 días hábiles.
+          </div>
+          <div class="form-group">
+            <label>Selecciona la sucursal *</label>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+              <button class="sucursal-opt" id="suc-cordoba" onclick="elegirSucursal('cordoba')">
+                <i class="ti ti-map-pin" style="color:var(--verde);font-size:18px;flex-shrink:0"></i>
+                <div style="text-align:left">
+                  <strong style="display:block;font-size:13px">Sucursal Córdoba</strong>
+                  <span style="font-size:12px;color:#666">Plaza Fundadores, Local #6 · Av. 1 entre Calles 26 y 28 #2620</span>
+                </div>
+              </button>
+              <button class="sucursal-opt" id="suc-veracruz" onclick="elegirSucursal('veracruz')">
+                <i class="ti ti-map-pin" style="color:var(--verde);font-size:18px;flex-shrink:0"></i>
+                <div style="text-align:left">
+                  <strong style="display:block;font-size:13px">Sucursal Boca del Río</strong>
+                  <span style="font-size:12px;color:#666">Plaza Veleros, Local #2 · Blvd. Boca del Río 901, El Conchal</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="irPaso(1)">← Atrás</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" onclick="irPaso(3)">Continuar →</button>
+        </div>
+      </div>
+      <div id="cp3" style="display:none">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px">Método de pago</div>
+        <div id="resumen-checkout" style="background:#f8f8f8;border-radius:12px;padding:14px;margin-bottom:18px;font-size:13px"></div>
+        <div style="background:#e8f5ee;border:1px solid #b8dbc9;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--verde);margin-bottom:14px;display:flex;align-items:flex-start;gap:8px">
+          <i class="ti ti-shield-check" style="font-size:16px;flex-shrink:0;margin-top:1px"></i>
+          <div>Se requiere el <strong>pago total del pedido</strong> para iniciar la producción de tu marco. 🖼️</div>
+        </div>
+        <button class="pago-opt" onclick="elegirPago(this,'transferencia')">
+          <i class="ti ti-building-bank" style="font-size:22px;color:var(--verde)"></i>
+          <div><div class="pago-opt-title">Transferencia / SPEI</div><div class="pago-opt-sub">Te enviamos los datos bancarios</div></div>
+        </button>
+        <button class="pago-opt" onclick="elegirPago(this,'whatsapp')">
+          <i class="ti ti-brand-whatsapp" style="font-size:22px;color:#25D366"></i>
+          <div><div class="pago-opt-title">Coordinar por WhatsApp</div><div class="pago-opt-sub">Te contactamos para acordar el pago</div></div>
+        </button>
+        <div class="transferencia-info" id="transf-info">
+          <strong>📲 Recibirás los datos bancarios por correo y WhatsApp</strong><br>
+          Beneficiario: Beverido Enmarca<br>
+          <span style="font-size:12px;color:#666">Una vez confirmado el pago total comenzamos la producción.</span>
+        </div>
+        <div class="btns-row">
+          <button class="btn-ant" onclick="irPaso(2)">← Atrás</button>
+          <button class="btn-sig" style="flex:2;margin-top:0" id="btn-confirmar" onclick="confirmarPedido()">
+            <span id="btn-confirmar-txt">Confirmar pedido ✓</span>
+            <span id="btn-confirmar-spin" style="display:none">Enviando...</span>
+          </button>
+        </div>
+      </div>
+      <div class="confirmacion" id="confirmacion">
+        <div style="font-size:56px;margin-bottom:12px">🎉</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--verde);margin-bottom:8px">¡Pedido recibido!</div>
+        <div id="conf-folio" style="background:#e8f5ee;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;color:var(--verde);display:inline-block;margin-bottom:14px"></div>
+        <div id="conf-detalle" style="font-size:13px;color:#555;line-height:1.9;margin-bottom:18px;text-align:left;background:#f8f8f8;border-radius:10px;padding:14px"></div>
+        <p style="font-size:13px;color:#666;line-height:1.7;margin-bottom:18px">Te enviamos una confirmación a tu correo y WhatsApp.<br>En cuanto recibamos tu pago comenzamos la producción. 🖼️</p>
+        <a id="wa-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;padding:13px 24px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px">
+          <i class="ti ti-brand-whatsapp"></i> Escribir a Beverido Enmarca
+        </a>
+        <br><button onclick="cerrarCheckout()" style="background:none;border:none;color:#999;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;margin-top:8px">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var cfg = {foto:null,nombre:'',tamano:'',tamanoLabel:'',mlColor:'',mlGrosor:'',moldura:'',molduraGrad:''};
+var carrito = [];
+
+// ── SHEETS ──
+function abrirSheet(id){
+  var el = document.getElementById('sheet-'+id);
+  el.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarSheet(id){
+  var el = document.getElementById('sheet-'+id);
+  el.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function cerrarSheetOverlay(e, id){
+  if(e.target === document.getElementById(id)){
+    cerrarSheet(id);
+  }
+}
+
+// ── FOTO ──
+function onFotoSeleccionada(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    cfg.foto = e.target.result;
+    cfg.nombre = file.name;
+    var fotoEl = document.getElementById('preview-foto');
+    var ph = document.getElementById('frame-placeholder');
+    fotoEl.src = e.target.result;
+    fotoEl.style.display = 'block';
+    ph.style.display = 'none';
+    document.getElementById('foto-thumb').src = e.target.result;
+    document.getElementById('foto-nombre-card').textContent = file.name.length > 22 ? file.name.substring(0,19)+'...' : file.name;
+    document.getElementById('foto-elegida-row').style.display = 'flex';
+    var shortName = file.name.length > 18 ? file.name.substring(0,15)+'...' : file.name;
+    setCardDone('foto', shortName);
+    actualizar();
+    cerrarSheet('foto');
+    // Sin auto-avance: el usuario elige libremente el siguiente paso
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById('file-inp').addEventListener('change', function(){
+  onFotoSeleccionada(this.files[0]);
+});
+
+function quitarFoto(){
+  cfg.foto = null;
+  var fotoEl = document.getElementById('preview-foto');
+  var ph = document.getElementById('frame-placeholder');
+  fotoEl.src = ''; fotoEl.style.display = 'none';
+  ph.style.display = 'flex';
+  document.getElementById('foto-elegida-row').style.display = 'none';
+  document.getElementById('file-inp').value = '';
+  setCardPending('foto', 'Toca aquí para subir foto...');
+  actualizar();
+}
+
+// ── TAMAÑO ──
+function elegirTamano(btn,val,label,sub,w,h){
+  document.querySelectorAll('.size-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.tamano = val; cfg.tamanoLabel = label;
+  // El preview siempre se mantiene en tamaño grande fijo — no se redimensiona
+  setCardDone('tamano', label);
+  actualizar();
+  cerrarSheet('tamano');
+}
+
+// ── MARÍA LUISA ──
+function elegirML(btn,nombre,hex,border){
+  document.querySelectorAll('.ml-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.mlColor = nombre === 'Sin margen' ? '' : nombre;
+  var mlEl = document.getElementById('frame-ml');
+  var grosorSec = document.getElementById('grosor-sect');
+  if(nombre === 'Sin margen'){
+    mlEl.style.padding = '0';
+    mlEl.style.background = 'transparent';
+    mlEl.style.border = 'none';
+    grosorSec.style.display = 'none';
+    cfg.mlGrosor = '';
+    setCardDone('ml', 'Sin margen');
+    actualizar();
+    cerrarSheet('ml');
+  } else {
+    mlEl.style.background = hex;
+    mlEl.style.border = '2px solid ' + border;
+    mlEl.style.padding = '6px';
+    grosorSec.style.display = 'block';
+    // scroll al grosor
+    setTimeout(function(){
+      grosorSec.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }, 100);
+  }
+  actualizar();
+}
+
+function elegirGrosor(btn,label,px){
+  document.querySelectorAll('.grosor-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.mlGrosor = label;
+  var mlEl = document.getElementById('frame-ml');
+  if(cfg.mlColor) mlEl.style.padding = px+'px';
+  var mlNombreBtn = document.querySelector('.ml-btn.on');
+  var mlNombre = mlNombreBtn ? mlNombreBtn.querySelector('strong').textContent : cfg.mlColor;
+  setCardDone('ml', mlNombre + ' · ' + label);
+  actualizar();
+  cerrarSheet('ml');
+}
+
+// ── MOLDURA ──
+function elegirMoldura(btn,nombre,grad){
+  document.querySelectorAll('.moldura-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  cfg.moldura = nombre; cfg.molduraGrad = grad;
+  document.getElementById('frame-outer').style.background = grad;
+  setCardDone('moldura', nombre);
+  actualizar();
+  cerrarSheet('moldura');
+}
+
+// ── CARD STATE HELPERS ──
+function setCardDone(id, val){
+  var card = document.getElementById('card-'+id);
+  var valEl = document.getElementById('val-'+id);
+  card.classList.add('done');
+  card.classList.remove('highlight');
+  valEl.textContent = val;
+  valEl.classList.remove('placeholder');
+}
+
+function setCardPending(id, val){
+  var card = document.getElementById('card-'+id);
+  var valEl = document.getElementById('val-'+id);
+  card.classList.remove('done');
+  valEl.textContent = val;
+  valEl.classList.add('placeholder');
+}
+
+// ── ACTUALIZAR BOTONES ──
+function actualizar(){
+  var listo = !!(cfg.foto && cfg.tamano && cfg.moldura);
+  document.getElementById('btn-carrito').disabled = !listo;
+  document.getElementById('btn-comprar').disabled = !listo;
+  var hint = document.getElementById('bottom-hint');
+  if(listo){
+    var t = cfg.tamanoLabel;
+    if(cfg.mlColor) t += ' · ML ' + cfg.mlColor;
+    t += ' · ' + cfg.moldura;
+    hint.textContent = t;
+  } else {
+    var falta = [];
+    if(!cfg.foto) falta.push('foto');
+    if(!cfg.tamano) falta.push('tamaño');
+    if(!cfg.moldura) falta.push('moldura');
+    hint.textContent = falta.length ? '⚠️ Falta elegir: ' + falta.join(', ') : '';
+  }
+  // Preview label
+  var lbl = document.getElementById('preview-label');
+  if(cfg.tamanoLabel){
+    var lt = cfg.tamanoLabel;
+    if(cfg.mlColor) lt += ' · ML ' + cfg.mlColor;
+    if(cfg.moldura) lt += ' · ' + cfg.moldura;
+    lbl.textContent = lt;
+  } else {
+    lbl.textContent = 'Sube tu foto y configura tu marco';
+  }
+}
+
+// ── CARRITO ──
+function pedirFaltantes(){
+  // Muestra aviso claro de qué falta, resalta la tarjeta
+  if(!cfg.foto){
+    document.getElementById('card-foto').classList.add('highlight');
+    mostrarAviso('⚠️ Primero sube tu foto para continuar');
+    setTimeout(function(){ document.getElementById('card-foto').classList.remove('highlight'); }, 2000);
+    return true;
+  }
+  if(!cfg.tamano){
+    document.getElementById('card-tamano').classList.add('highlight');
+    abrirSheet('tamano');
+    setTimeout(function(){ document.getElementById('card-tamano').classList.remove('highlight'); }, 2000);
+    return true;
+  }
+  if(!cfg.moldura){
+    document.getElementById('card-moldura').classList.add('highlight');
+    abrirSheet('moldura');
+    setTimeout(function(){ document.getElementById('card-moldura').classList.remove('highlight'); }, 2000);
+    return true;
+  }
+  return false;
+}
+
+function mostrarAviso(msg){
+  var hint = document.getElementById('bottom-hint');
+  var prev = hint.textContent;
+  hint.textContent = msg;
+  hint.style.color = '#cc3333';
+  setTimeout(function(){
+    hint.textContent = prev;
+    hint.style.color = '';
+    actualizar();
+  }, 2500);
+}
+function agregarCarrito(){
+  if(!cfg.foto||!cfg.tamano||!cfg.moldura){ pedirFaltantes(); return; }
+  var item = {
+    id: Date.now(),
+    foto: cfg.foto,
+    tamano: cfg.tamanoLabel,
+    ml: cfg.mlColor,
+    grosor: cfg.mlGrosor,
+    moldura: cfg.moldura
+  };
+  carrito.push(item);
+  actualizarBadge();
+  // Mostrar popup de confirmación
+  document.getElementById('popup-agregado').style.display = 'flex';
+}
+
+function comprarAhora(){
+  if(!cfg.foto||!cfg.tamano||!cfg.moldura){ pedirFaltantes(); return; }
+  // Si hay un usuario logueado o no, ir directo al checkout
+  // Agregar al carrito primero si está vacío
+  if(!carrito.length){
+    var item = {
+      id: Date.now(),
+      foto: cfg.foto,
+      tamano: cfg.tamanoLabel,
+      ml: cfg.mlColor,
+      grosor: cfg.mlGrosor,
+      moldura: cfg.moldura
+    };
+    carrito.push(item);
+    actualizarBadge();
+  }
+  irCheckout();
+}
+
+function popupPagar(){
+  document.getElementById('popup-agregado').style.display = 'none';
+  irCheckout();
+}
+
+function popupVerCarrito(){
+  document.getElementById('popup-agregado').style.display = 'none';
+  // Mostrar panel del carrito
+  document.getElementById('carrito-panel').style.display = 'flex';
+  document.getElementById('carrito-overlay').style.display = 'block';
+  renderCarrito();
+}
+
+function popupSeguirComprando(){
+  document.getElementById('popup-agregado').style.display = 'none';
+}
+
+function actualizarBadge(){
+  // Badge local (iframe) — se oculta ya que el carrito va al padre
+  var b = document.getElementById('cart-badge');
+  if(b){ b.style.display='none'; }
+}
+
+function abrirCarrito(){
+  document.getElementById('carrito-panel').style.display = 'flex';
+  document.getElementById('carrito-overlay').style.display = 'block';
+  renderCarrito();
+}
+
+function cerrarCarrito(){
+  document.getElementById('carrito-overlay').style.display = 'none';
+  document.getElementById('carrito-panel').style.display = 'none';
+}
+
+function renderCarrito(){
+  var cont = document.getElementById('carrito-items');
+  var footer = document.getElementById('carrito-footer');
+  if(!carrito.length){
+    cont.innerHTML='<div style="text-align:center;padding:40px;color:#999">Tu carrito está vacío</div>';
+    footer.style.display='none'; return;
+  }
+  var html='';
+  carrito.forEach(function(item){
+    var desc = item.tamano;
+    if(item.ml) desc += ' · ML '+item.ml;
+    desc += ' · '+item.moldura;
+    html+='<div class="carrito-item"><img src="'+item.foto+'">';
+    html+='<div class="ci-info"><strong>Marco personalizado</strong>';
+    html+='<div class="ci-desc">'+desc+'</div>';
+    html+='<div class="ci-precio">Precio por definir</div></div>';
+    html+='<button class="ci-del" onclick="eliminarItem('+item.id+')"><i class="ti ti-trash"></i></button></div>';
+  });
+  cont.innerHTML=html;
+  footer.style.display='block';
+}
+
+function eliminarItem(id){
+  carrito=carrito.filter(function(i){return i.id!==id;});
+  actualizarBadge(); renderCarrito();
+}
+
+function irCheckout(){
+  cerrarCarrito();
+  var ov=document.getElementById('checkout-overlay');
+  ov.style.display='flex';
+  ov.classList.add('active');
+  document.body.style.overflow='hidden';
+  ov.scrollTop=0;
+  irPaso(1);
+  try{
+    var cl=JSON.parse(localStorage.getItem('be_cliente')||'{}');
+    var u = window._usuarioActual;
+    var nombre = (u && u.displayName) || cl.nombre || '';
+    var email  = (u && u.email)       || cl.email  || '';
+    var tel    = cl.tel || '';
+    if(nombre && document.getElementById('co-nombre')) document.getElementById('co-nombre').value=nombre;
+    if(email  && document.getElementById('co-email'))  document.getElementById('co-email').value=email;
+    if(tel    && document.getElementById('co-tel'))    document.getElementById('co-tel').value=tel;
+  }catch(e){}
+}
+
+function validarPaso1(){
+  var nombre = (document.getElementById('co-nombre').value||'').trim();
+  var email  = (document.getElementById('co-email').value||'').trim();
+  var tel    = (document.getElementById('co-tel').value||'').trim();
+  if(!nombre){ document.getElementById('co-nombre').focus(); document.getElementById('co-nombre').style.borderColor='#cc3333'; return; }
+  if(!email || !/\S+@\S+\.\S+/.test(email)){ document.getElementById('co-email').focus(); document.getElementById('co-email').style.borderColor='#cc3333'; return; }
+  if(!tel || tel.length < 10){ document.getElementById('co-tel').focus(); document.getElementById('co-tel').style.borderColor='#cc3333'; return; }
+  ['co-nombre','co-email','co-tel'].forEach(function(id){ document.getElementById(id).style.borderColor=''; });
+  irPaso(2);
+}
+
+function cerrarCheckout(){
+  var ov=document.getElementById('checkout-overlay');
+  ov.style.display='none';
+  ov.classList.remove('active');
+  document.body.style.overflow='';
+  [1,2,3].forEach(function(i){document.getElementById('cp'+i).style.display=i===1?'block':'none';});
+  document.getElementById('confirmacion').style.display='none';
+}
+
+function irPaso(n){
+  [1,2,3].forEach(function(i){
+    document.getElementById('cp'+i).style.display=i===n?'block':'none';
+    var sc=document.getElementById('sc'+i);
+    sc.style.background=i<=n?'#fff':'rgba(255,255,255,.3)';
+    sc.style.color=i<=n?'var(--verde)':'#fff';
+  });
+  document.getElementById('confirmacion').style.display='none';
+  if(n===3){
+    var html='';
+    carrito.forEach(function(item){
+      html+='<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">';
+      html+='<img src="'+item.foto+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px">';
+      html+='<div style="font-size:12px">'+item.tamano+' · '+item.moldura+'</div></div>';
+    });
+    if(entregaTipo==='sucursal'){
+      var sucLabel = sucursalElegida==='cordoba' ? '🏪 Recoger en Córdoba (Plaza Fundadores)' : '🏪 Recoger en Boca del Río (Plaza Veleros)';
+      html+='<div style="font-size:12px;color:var(--verde);margin-bottom:6px;font-weight:600">'+sucLabel+'</div>';
+    } else {
+      var ciudad = (document.getElementById('co-ciudad')||{}).value || '';
+      var estado = (document.getElementById('co-estado')||{}).value || '';
+      if(ciudad||estado) html+='<div style="font-size:12px;color:#666;margin-bottom:6px">📦 Envío: '+ciudad+(estado?' · '+estado:'')+'</div>';
+    }
+    html+='<div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:10px;margin-top:8px;font-weight:700"><span>Total:</span><span style="color:var(--verde)">Por definir</span></div>';
+    document.getElementById('resumen-checkout').innerHTML=html;
+  }
+}
+
+// ── ENTREGA ──
+var entregaTipo = 'envio';
+var sucursalElegida = '';
+
+function elegirEntrega(tipo){
+  entregaTipo = tipo;
+  document.getElementById('opt-envio').classList.toggle('on', tipo==='envio');
+  document.getElementById('opt-sucursal').classList.toggle('on', tipo==='sucursal');
+  document.getElementById('seccion-envio').style.display = tipo==='envio' ? 'block' : 'none';
+  document.getElementById('seccion-sucursal').style.display = tipo==='sucursal' ? 'block' : 'none';
+  sucursalElegida = '';
+}
+
+function elegirSucursal(id){
+  sucursalElegida = id;
+  document.querySelectorAll('.sucursal-opt').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('suc-'+id).classList.add('on');
+}
+
+function elegirPago(btn,tipo){
+  document.querySelectorAll('.pago-opt').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('transf-info').style.display=tipo==='transferencia'?'block':'none';
+}
+
+// ── AUTOCOMPLETADO CP ──
+var cpTimer = null;
+
+var CP_ESTADOS = {
+  "01":"Ciudad de Mexico","02":"Ciudad de Mexico","03":"Ciudad de Mexico",
+  "04":"Ciudad de Mexico","05":"Ciudad de Mexico","06":"Ciudad de Mexico",
+  "07":"Ciudad de Mexico","08":"Ciudad de Mexico","09":"Ciudad de Mexico",
+  "10":"Ciudad de Mexico","11":"Ciudad de Mexico","12":"Ciudad de Mexico",
+  "13":"Ciudad de Mexico","14":"Ciudad de Mexico","15":"Ciudad de Mexico",
+  "16":"Ciudad de Mexico","20":"Aguascalientes","21":"Baja California",
+  "22":"Baja California","23":"Baja California Sur","24":"Campeche",
+  "25":"Coahuila","26":"Coahuila","27":"Chiapas","28":"Colima",
+  "29":"Chiapas","30":"Chiapas","31":"Chihuahua","32":"Chihuahua",
+  "33":"Durango","34":"Durango","35":"Guanajuato","36":"Guanajuato",
+  "37":"Guanajuato","38":"Guanajuato","39":"Guerrero","40":"Guerrero",
+  "41":"Guerrero","42":"Hidalgo","43":"Hidalgo","44":"Jalisco",
+  "45":"Jalisco","46":"Jalisco","47":"Jalisco","48":"Jalisco","49":"Jalisco",
+  "50":"Estado de Mexico","51":"Estado de Mexico","52":"Estado de Mexico",
+  "53":"Estado de Mexico","54":"Estado de Mexico","55":"Estado de Mexico",
+  "56":"Estado de Mexico","57":"Estado de Mexico","58":"Michoacan",
+  "59":"Michoacan","60":"Michoacan","61":"Michoacan","62":"Morelos",
+  "63":"Nayarit","64":"Nuevo Leon","65":"Nuevo Leon","66":"Nuevo Leon",
+  "67":"Oaxaca","68":"Oaxaca","69":"Oaxaca","70":"Oaxaca","71":"Oaxaca",
+  "72":"Puebla","73":"Puebla","74":"Puebla","75":"Puebla",
+  "76":"Queretaro","77":"Quintana Roo","78":"San Luis Potosi",
+  "79":"San Luis Potosi","80":"Sinaloa","81":"Sinaloa","82":"Sinaloa",
+  "83":"Sonora","84":"Sonora","85":"Sonora","86":"Tabasco",
+  "87":"Tamaulipas","88":"Tamaulipas","89":"Tamaulipas","90":"Tlaxcala",
+  "91":"Veracruz","92":"Veracruz","93":"Veracruz","94":"Veracruz",
+  "95":"Veracruz","96":"Veracruz","97":"Yucatan","98":"Zacatecas","99":"Zacatecas"
+};
+
+var CP_MUNICIPIOS = {
+  "945":"Cordoba","946":"Cordoba","947":"Fortin","948":"Amatlipac",
+  "917":"Veracruz","918":"Veracruz","919":"Boca del Rio",
+  "910":"Xalapa","911":"Xalapa","912":"Coatepec",
+  "960":"Coatzacoalcos","961":"Coatzacoalcos","967":"Minatitlan",
+  "064":"Monterrey","065":"Garza Garcia","066":"San Nicolas",
+  "441":"Guadalajara","442":"Guadalajara","443":"Zapopan",
+  "720":"Puebla","721":"Puebla","110":"Ciudad de Mexico","111":"Ciudad de Mexico"
+};
+
+var CP_DATA = {
+  "94500":{"m":"Cordoba","e":"Veracruz","c":["Centro","Ignacio Zaragoza","Margarita Maza de Juarez","Reforma","Tepeyac"]},
+  "94501":{"m":"Cordoba","e":"Veracruz","c":["INFONAVIT Las Torres","Las Torres"]},
+  "94502":{"m":"Cordoba","e":"Veracruz","c":["La Piedad"]},
+  "94503":{"m":"Cordoba","e":"Veracruz","c":["INFONAVIT Valle Verde","Valle Verde"]},
+  "94504":{"m":"Cordoba","e":"Veracruz","c":["Colinas del Sur","Granjas del Sur"]},
+  "94505":{"m":"Cordoba","e":"Veracruz","c":["Las Flores","Santa Cruz"]},
+  "94506":{"m":"Cordoba","e":"Veracruz","c":["Campo Militar","Galaxias","Hacienda los Angeles"]},
+  "94507":{"m":"Cordoba","e":"Veracruz","c":["Bugambilias","La Joya","Los Cedros"]},
+  "94508":{"m":"Cordoba","e":"Veracruz","c":["Nuevo Cordoba","Villas del Cafetal"]},
+  "94509":{"m":"Cordoba","e":"Veracruz","c":["Fracc. Los Pinos","Villa del Sol"]},
+  "94510":{"m":"Cordoba","e":"Veracruz","c":["Ampliacion 16 de Septiembre","El Castillo","Guadalupe","Las Brisas","Plan de Ayala"]},
+  "94520":{"m":"Cordoba","e":"Veracruz","c":["El Potrero","La Palma","La Pirinola","Unidad Habitacional Cuauhtemoc","Vista Verde"]},
+  "94530":{"m":"Cordoba","e":"Veracruz","c":["Azteca","El Bosque","El Espinal","Rio Blanco","Santa Rosa"]},
+  "94470":{"m":"Fortin","e":"Veracruz","c":["Centro","El Calvario","La Gloria","Las Flores","Los Pinos"]},
+  "94300":{"m":"Orizaba","e":"Veracruz","c":["Centro","La Pastoresa","Napoles","Rafael Murillo Vidal","Tecajete"]},
+  "91700":{"m":"Veracruz","e":"Veracruz","c":["Centro","Flores Magon","Miguel Hidalgo","Reforma","Salvador Diaz Miron"]},
+  "91810":{"m":"Boca del Rio","e":"Veracruz","c":["Centro","Las Playas","Lomas del Rio","Paraiso","Rivera Veracruzana"]},
+  "91820":{"m":"Boca del Rio","e":"Veracruz","c":["El Conchal","Gran Via Tropical","Mandinga","Playa de Vacas"]},
+  "91000":{"m":"Xalapa","e":"Veracruz","c":["Centro","Encinal","Obrero Campesina","Rafael Lucio","Tamiahua"]},
+  "96400":{"m":"Coatzacoalcos","e":"Veracruz","c":["Centro","El Tesoro","Las Flores","Olmeca","Plutarco Elias"]},
+  "06000":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Centro Historico","Guerrero","Morelos","Tepito"]},
+  "06500":{"m":"Cuauhtemoc","e":"Ciudad de Mexico","c":["Esperanza","Hipodromo","Narvarte","Roma Norte","Roma Sur"]},
+  "11000":{"m":"Miguel Hidalgo","e":"Ciudad de Mexico","c":["Anzures","Granada","Polanco","San Miguel Chapultepec"]},
+  "64000":{"m":"Monterrey","e":"Nuevo Leon","c":["Centro","Independencia","Obispado","San Luisito","Tecnologico"]},
+  "44100":{"m":"Guadalajara","e":"Jalisco","c":["Analco","Centro","Mexicaltzingo","San Juan de Dios","Santa Teresita"]},
+  "72000":{"m":"Puebla","e":"Puebla","c":["Centro","El Alto","El Carmen","La Victoria","Xonaca"]},
+  "76000":{"m":"Santiago de Queretaro","e":"Queretaro","c":["Centro","El Retablo","La Capilla","Ninos Heroes"]},
+  "77500":{"m":"Cancun","e":"Quintana Roo","c":["Centro","Ciudad Cancun","Las Palmas","Supermanzana 2"]},
+  "97000":{"m":"Merida","e":"Yucatan","c":["Centro","Garcia Gieres","Jesus Carranza","Mejorada","Santa Ana"]}
+};
+
+function buscarCP(val){
+  val = val.replace(/\D/g,'');
+  document.getElementById('co-cp').value = val;
+  document.getElementById('cp-ok').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'none';
+  document.getElementById('co-ciudad').value = '';
+  document.getElementById('co-estado').value = '';
+  var cg = document.getElementById('colonia-group');
+  if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu CP para ver colonias">';
+  if(val.length < 5){ document.getElementById('cp-spinner').style.display='none'; return; }
+  document.getElementById('cp-spinner').style.display = 'block';
+  clearTimeout(cpTimer);
+  cpTimer = setTimeout(function(){ buscarConSepomex(val); }, 300);
+}
+
+function buscarConSepomex(cp){
+  document.getElementById('cp-spinner').style.display = 'none';
+  if(CP_DATA[cp]){
+    var d = CP_DATA[cp];
+    aplicarCP(d.m, d.e, d.c);
+    return;
+  }
+  var pref2 = cp.substring(0,2);
+  var estadoDeducido = CP_ESTADOS[pref2] || '';
+  var pref3 = cp.substring(0,3);
+  var munDeducido = CP_MUNICIPIOS[pref3] || '';
+  if(estadoDeducido){
+    document.getElementById('co-estado').value = estadoDeducido;
+    if(munDeducido) document.getElementById('co-ciudad').value = munDeducido;
+    document.getElementById('cp-ok').style.display = 'block';
+    var cg = document.getElementById('colonia-group');
+    if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+    document.getElementById('co-ciudad').removeAttribute('readonly');
+  } else {
+    mostrarCPError();
+  }
+}
+
+function aplicarCP(ciudad, estado, colonias){
+  document.getElementById('co-ciudad').value = ciudad;
+  document.getElementById('co-estado').value = estado;
+  document.getElementById('cp-ok').style.display = 'block';
+  mostrarColonias(colonias);
+}
+
+function mostrarColonias(colonias){
+  var cg = document.getElementById('colonia-group');
+  if(!cg) return;
+  if(!colonias || !colonias.length){
+    cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+    return;
+  }
+  var html = '<label>Colonia *</label>';
+  html += '<select id="co-colonia" style="width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:#fff;cursor:pointer">';
+  html += '<option value="">Selecciona tu colonia</option>';
+  colonias.forEach(function(col){ html += '<option value="'+col+'">'+col+'</option>'; });
+  html += '</select>';
+  cg.innerHTML = html;
+}
+
+function mostrarCPError(){
+  document.getElementById('cp-spinner').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'block';
+  document.getElementById('cp-ok').style.display = 'none';
+  document.getElementById('co-ciudad').value = '';
+  document.getElementById('co-estado').value = '';
+  var cg = document.getElementById('colonia-group');
+  if(cg) cg.innerHTML = '<label>Colonia *</label><input type="text" id="co-colonia" placeholder="Escribe tu colonia">';
+  document.getElementById('co-ciudad').removeAttribute('readonly');
+}
+
+// ── AUTH UI ──
+window._usuarioActual = null;
+window._pendienteCheckout = false;
+
+function actualizarUIAuth(user){
+  var bar = document.getElementById('auth-bar');
+  var leftEl = document.getElementById('auth-bar-left');
+  var btn = document.getElementById('auth-bar-btn');
+  if(user){
+    var nombre = user.displayName || user.email || 'Usuario';
+    var fotoURL = user.photoURL;
+    var avatarHTML = fotoURL
+      ? '<img src="'+fotoURL+'" class="auth-avatar">'
+      : '<div class="auth-avatar-placeholder"><i class="ti ti-user" style="font-size:13px"></i></div>';
+    leftEl.innerHTML = avatarHTML + '<span>Hola, <strong>'+nombre.split(' ')[0]+'</strong></span>';
+    btn.textContent = 'Cerrar sesión';
+    btn.className = 'btn-auth-small';
+    btn.onclick = function(){ cerrarSesion(); };
+    try {
+      if(user.displayName && document.getElementById('co-nombre') && !document.getElementById('co-nombre').value)
+        document.getElementById('co-nombre').value = user.displayName;
+      if(user.email && document.getElementById('co-email') && !document.getElementById('co-email').value)
+        document.getElementById('co-email').value = user.email;
+    } catch(e){}
+  } else {
+    leftEl.innerHTML = '<div class="auth-avatar-placeholder"><i class="ti ti-user" style="font-size:13px"></i></div><span id="auth-bar-msg">¿Ya eres cliente? <strong>Inicia sesión</strong></span>';
+    btn.textContent = 'Iniciar sesión';
+    btn.className = 'btn-auth-small primary';
+    btn.onclick = function(){ abrirLoginModal(false); };
+  }
+}
+
+function abrirLoginModal(requiereLogin, esBienvenida){
+  var modal = document.getElementById('login-modal');
+  var sub = document.getElementById('login-sub');
+  var skipBtn = document.getElementById('login-skip-btn');
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+  document.getElementById('login-error').style.display = 'none';
+  modal.dataset.requiere = requiereLogin ? '1' : '0';
+  var closeBtn = document.getElementById('login-close-btn');
+  if(requiereLogin){
+    sub.textContent = 'Para realizar tu pedido necesitas iniciar sesión o crear una cuenta.';
+    if(skipBtn) skipBtn.style.display = 'none';
+    if(closeBtn) closeBtn.style.display = 'none';
+  } else if(esBienvenida){
+    if(closeBtn) closeBtn.style.display = 'block';
+    sub.textContent = '¡Bienvenido! Inicia sesión para guardar tus datos y hacer pedidos más rápido.';
+    if(skipBtn) skipBtn.style.display = 'block';
+  } else {
+    sub.textContent = 'Inicia sesión para guardar tus datos y hacer pedidos más rápido.';
+    if(skipBtn) skipBtn.style.display = 'block';
+  }
+}
+
+function cerrarLoginModal(){
+  var modal = document.getElementById('login-modal');
+  if(modal.dataset.requiere === '1') return;
+  modal.style.display = 'none';
+  modal.classList.remove('active');
+}
+
+function saltarLogin(){
+  var modal = document.getElementById('login-modal');
+  modal.style.display = 'none';
+  modal.classList.remove('active');
+  window._saltoPorLogin = true;
+}
+
+function toggleLoginModo(){
+  var modoDiv = document.getElementById('login-modo');
+  var btn = document.getElementById('login-email-btn');
+  var toggle = document.querySelector('.login-toggle span');
+  if(modoDiv.dataset.modo === 'login'){
+    modoDiv.dataset.modo = 'registro';
+    btn.textContent = 'Crear cuenta';
+    toggle.textContent = 'Ya tengo cuenta';
+    toggle.previousSibling.textContent = '¿Ya tienes cuenta? ';
+  } else {
+    modoDiv.dataset.modo = 'login';
+    btn.textContent = 'Iniciar sesión';
+    toggle.textContent = 'Regístrate';
+    toggle.previousSibling.textContent = '¿No tienes cuenta? ';
+  }
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// ── EMAILJS ──
+var EMAILJS_PUBLIC_KEY  = '_CuJeA4PF2v6nvIjO';
+var EMAILJS_SERVICE_ID  = 'service_beverido';
+var EMAILJS_TPL_CLIENTE = 'template_8y1ut7f';
+var EMAILJS_TPL_TIENDA  = 'template_64uqlef';
+
+function confirmarPedido(){
+  var nombre = document.getElementById('co-nombre').value.trim();
+  var email  = document.getElementById('co-email').value.trim();
+  var tel    = document.getElementById('co-tel').value.trim();
+  if(!nombre||!email||!tel){ alert('Completa tus datos de contacto en el Paso 1 primero.'); irPaso(1); return; }
+  if(entregaTipo==='sucursal' && !sucursalElegida){ alert('Por favor selecciona la sucursal donde recogerás tu pedido.'); irPaso(2); return; }
+  if(entregaTipo==='envio'){
+    var calle = (document.getElementById('co-calle')||{}).value||'';
+    if(!calle.trim()){ alert('Por favor ingresa tu dirección de envío.'); irPaso(2); return; }
+  }
+  localStorage.setItem('be_cliente', JSON.stringify({nombre:nombre,email:email,tel:tel}));
+  var folio = 'BE-' + Date.now();
+  var resumenItems = '';
+  carrito.forEach(function(item, i){
+    resumenItems += (i+1)+'. '+item.tamano;
+    if(item.ml) resumenItems += ' · ML '+item.ml+(item.grosor?' ('+item.grosor+')':'');
+    resumenItems += ' · Moldura: '+item.moldura+'\n';
+  });
+  var entregaTexto = '';
+  if(entregaTipo === 'sucursal'){
+    var suc = sucursalElegida === 'cordoba'
+      ? 'Sucursal Córdoba — Plaza Fundadores, Local #6'
+      : 'Sucursal Boca del Río — Plaza Veleros, Local #2';
+    entregaTexto = 'RECOGER EN TIENDA\n' + suc;
+  } else {
+    var cal = (document.getElementById('co-calle')||{}).value||'';
+    var col = (document.getElementById('co-colonia')||{}).value||'';
+    var cd  = (document.getElementById('co-ciudad')||{}).value||'';
+    var cp  = (document.getElementById('co-cp')||{}).value||'';
+    var est = (document.getElementById('co-estado')||{}).value||'';
+    var ref = (document.getElementById('co-ref')||{}).value||'';
+    entregaTexto = 'ENVÍO A DOMICILIO\n'+cal+', '+col+'\n'+cd+', '+est+' CP '+cp+(ref?'\nRef: '+ref:'');
+  }
+  document.getElementById('btn-confirmar-txt').style.display='none';
+  document.getElementById('btn-confirmar-spin').style.display='inline';
+  document.getElementById('btn-confirmar').disabled=true;
+
+  function enviarConFotoURL(fotoURL){
+    var paramsCliente = { folio:folio, cliente_nombre:nombre, cliente_email:email, cliente_tel:tel, resumen_pedido:resumenItems, entrega:entregaTexto, foto_url:fotoURL||'(foto incluida)' };
+    var paramsTienda  = { folio:folio, cliente_nombre:nombre, cliente_email:email, cliente_tel:tel, resumen_pedido:resumenItems, entrega:entregaTexto, foto_url:fotoURL||'Sin URL', metodo_pago: document.querySelector('.pago-opt.on .pago-opt-title') ? document.querySelector('.pago-opt.on .pago-opt-title').textContent : 'Sin seleccionar' };
+    var sent=0, errs=0, errMsgs=[];
+    function checkDone(){
+      if(sent+errs < 2) return;
+      if(errMsgs.length){
+        var d=document.createElement('div');
+        d.style.cssText='position:fixed;bottom:20px;left:16px;right:16px;background:#cc3333;color:#fff;padding:14px 16px;border-radius:12px;font-size:13px;z-index:9999;font-family:Inter,sans-serif';
+        d.innerHTML='<strong>⚠️ Error al enviar correo:</strong><br>'+errMsgs.join('<br>');
+        document.body.appendChild(d);
+        setTimeout(function(){ d.remove(); },12000);
+      }
+      finalizarPedido(folio,nombre,tel,resumenItems,entregaTexto);
+    }
+    try {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TPL_CLIENTE, paramsCliente).then(function(){ sent++; checkDone(); }).catch(function(e){ errMsgs.push('Cliente: '+(e.text||e.message)); errs++; checkDone(); });
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TPL_TIENDA, paramsTienda).then(function(){ sent++; checkDone(); }).catch(function(e){ errMsgs.push('Tienda: '+(e.text||e.message)); errs++; checkDone(); });
+    } catch(e){
+      finalizarPedido(folio,nombre,tel,resumenItems,entregaTexto);
+    }
+  }
+
+  var IMGBB_API_KEY = '773ae2001243f05869339390014e4c03';
+  if(cfg.foto && cfg.foto.startsWith('data:')){
+    var base64 = cfg.foto.split(',')[1];
+    var fd = new FormData();
+    fd.append('key', IMGBB_API_KEY);
+    fd.append('image', base64);
+    fd.append('name', folio);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://api.imgbb.com/1/upload');
+    xhr.onload = function(){
+      try { var res=JSON.parse(xhr.responseText); enviarConFotoURL(res.data&&res.data.url?res.data.url:''); } catch(e){ enviarConFotoURL(''); }
+    };
+    xhr.onerror = function(){ enviarConFotoURL(''); };
+    xhr.send(fd);
+  } else {
+    enviarConFotoURL('');
+  }
+}
+
+function finalizarPedido(folio,nombre,tel,resumenItems,entregaTexto){
+  [1,2,3].forEach(function(i){document.getElementById('cp'+i).style.display='none';});
+  document.getElementById('confirmacion').style.display='block';
+  document.getElementById('conf-folio').textContent = '📋 Folio: ' + folio;
+  var html='<div style="font-weight:700;margin-bottom:6px">Resumen de tu pedido</div>';
+  html+='<pre style="white-space:pre-wrap;font-family:Inter,sans-serif;font-size:12px;color:#444;line-height:1.8">';
+  html+=resumenItems+'\n📍 Entrega:\n'+entregaTexto+'</pre>';
+  document.getElementById('conf-detalle').innerHTML = html;
+  var msg='Hola%21+Acabo+de+hacer+un+pedido+en+Beverido+Enmarca.%0A%0A';
+  msg+='*Folio%3A+'+folio+'*%0A';
+  msg+='Nombre%3A+'+encodeURIComponent(nombre)+'%0A';
+  msg+='Tel%3A+'+encodeURIComponent(tel)+'%0A%0A';
+  msg+='Pedido%3A%0A'+encodeURIComponent(resumenItems);
+  msg+='%0A'+encodeURIComponent(entregaTexto);
+  document.getElementById('wa-link').href = 'https://wa.me/522711079327?text='+msg;
+  carrito = []; actualizarBadge();
+  document.getElementById('btn-confirmar-txt').style.display='inline';
+  document.getElementById('btn-confirmar-spin').style.display='none';
+  document.getElementById('btn-confirmar').disabled=false;
+}
+</script>
+</body>
+</html>
