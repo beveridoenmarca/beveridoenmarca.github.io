@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel de pedidos · Beverido Enmarca</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--verde:#2A5C3F;--verde2:#1e4430;--verde-l:#E8F2EC;--tx:#1d1d1d;--tx2:#666;--bd:#e4e4e4;--bg:#f5f6f4;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;-webkit-text-size-adjust:100%}
+button{font-family:inherit;cursor:pointer}
+.top{background:var(--verde);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.top h1{font-family:'Playfair Display',serif;font-size:19px;flex:1}
+.top small{opacity:.8;font-size:12px;display:block;font-family:Inter,sans-serif;font-weight:400}
+.top button{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:20px;padding:8px 14px;font-size:13px;font-weight:600}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+.centro{max-width:420px;margin:12vh auto;background:#fff;border-radius:18px;padding:34px 26px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.centro h2{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:8px}
+.centro p{color:var(--tx2);font-size:14px;line-height:1.6;margin-bottom:20px}
+.btn{background:var(--verde);color:#fff;border:none;border-radius:50px;padding:13px 24px;font-size:14px;font-weight:700}
+.btn.sec{background:#fff;color:var(--verde);border:2px solid var(--verde)}
+.filtros{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:4px;-webkit-overflow-scrolling:touch}
+.chip{flex-shrink:0;background:#fff;border:1px solid var(--bd);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--tx2)}
+.chip.on{background:var(--verde);border-color:var(--verde);color:#fff}
+.chip b{margin-left:4px}
+.barra{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.barra input,.barra select{flex:1;min-width:150px;border:1px solid var(--bd);border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;background:#fff}
+.card{background:#fff;border:1px solid var(--bd);border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.card.nuevo{border-color:#F0C36D;box-shadow:0 0 0 3px #FFF4E0}
+.ch{display:flex;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.folio{font-weight:700;font-size:15px}
+.fecha{font-size:12px;color:var(--tx2);margin-top:2px}
+.badge{display:inline-block;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;white-space:nowrap}
+.sec-b{padding:12px 16px;border-bottom:1px solid #f0f0f0;font-size:13.5px;line-height:1.6}
+.sec-b .lbl{font-size:11.5px;font-weight:700;color:var(--tx2);text-transform:none;margin-bottom:4px;display:block}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lnk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--verde);text-decoration:none;background:#fff}
+.lnk.wa{background:#25D366;border-color:#25D366;color:#fff}
+.item{display:flex;gap:12px;align-items:center;padding:8px 0}
+.item+.item{border-top:1px dashed #eee}
+.item .t{font-weight:600}
+.item .s{color:var(--tx2);font-size:12.5px;line-height:1.5}
+.qty{margin-left:auto;font-weight:700;background:var(--verde-l);color:var(--verde);border-radius:20px;padding:3px 10px;font-size:13px;flex-shrink:0}
+.acc{padding:14px 16px;background:#fafafa}
+.acc .row{margin-top:10px}
+.acc button{border:none;border-radius:50px;padding:11px 18px;font-size:13.5px;font-weight:700}
+.b-ok{background:var(--verde);color:#fff}
+.b-ot{background:#fff;color:var(--tx);border:1px solid var(--bd)!important}
+.b-no{background:#fff;color:#cc3333;border:1px solid #f0c4c4!important}
+.vacio{text-align:center;color:var(--tx2);padding:50px 10px;font-size:14px}
+.toast{position:fixed;left:16px;right:16px;bottom:20px;background:#222;color:#fff;border-radius:12px;padding:13px 16px;font-size:13.5px;z-index:50;max-width:480px;margin:0 auto}
+.err{background:#fdecec;border:1px solid #f3b9b9;color:#8a1f1f;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, updateDoc, collection, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// Correos con permiso de administrador (deben coincidir con las reglas de Firestore)
+const ADMINS = ['gbeveridodiazmiron@gmail.com'];
+
+const app = initializeApp({
+  apiKey: "AIzaSyB8PSKUp7nL2mOsdFW7tWJbmpvk5b27md8",
+  authDomain: "beverido-4d80a.firebaseapp.com",
+  projectId: "beverido-4d80a",
+  storageBucket: "beverido-4d80a.firebasestorage.app",
+  messagingSenderId: "270167744198",
+  appId: "1:270167744198:web:9f0ada395fe102e02f41c7"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const ESTADOS = {
+  pendiente:      {txt:'⏳ Pendiente de confirmación', bg:'#FFF4E0', color:'#8a5a00'},
+  confirmado:     {txt:'✅ Confirmado',                bg:'#E8F2EC', color:'#2A5C3F'},
+  en_elaboracion: {txt:'🔨 En elaboración',            bg:'#E7EEF9', color:'#1f4e8c'},
+  listo:          {txt:'📦 Listo para recoger',        bg:'#E8F2EC', color:'#2A5C3F'},
+  entregado:      {txt:'🎉 Entregado',                 bg:'#EEEEEE', color:'#555'},
+  cancelado:      {txt:'❌ Cancelado',                 bg:'#FDECEC', color:'#8a1f1f'}
+};
+const SIGUIENTE = {pendiente:'confirmado', confirmado:'en_elaboracion', en_elaboracion:'listo', listo:'entregado'};
+const TXT_BTN = {confirmado:'✅ Confirmar pedido', en_elaboracion:'🔨 Pasar a elaboración', listo:'📦 Marcar listo para recoger', entregado:'🎉 Marcar entregado'};
+
+let pedidos = [], filtro = 'pendiente', sucursal = '', busqueda = '', unsub = null, errorMsg = '', vistos = null;
+const app$ = document.getElementById('app');
+
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esAdmin = u => u && u.email && u.emailVerified !== false && ADMINS.indexOf(u.email.toLowerCase()) >= 0;
+
+function toast(t){
+  const d = document.createElement('div'); d.className='toast'; d.textContent=t;
+  document.body.appendChild(d); setTimeout(()=>d.remove(), 3500);
+}
+
+function miniMarco(it, box){
+  box = box || 64;
+  const cs = v => String(v==null?'':v).replace(/[^#%(),.\w\s\-]/g,'');
+  const m = /(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)/.exec(it.tamano||'');
+  const a = m ? parseFloat(m[1]) : 3, b = m ? parseFloat(m[2]) : 4;
+  let fw, fh;
+  if(a >= b){ fw = box; fh = Math.max(box*0.55, box*b/a); } else { fh = box; fw = Math.max(box*0.55, box*a/b); }
+  const fr = Math.max(3, Math.round(box*0.07));
+  const grad = cs(it.molduraGrad) || 'linear-gradient(135deg,#8b8b8b,#bbb,#8b8b8b)';
+  let ml = '';
+  if(it.mlHex){ const mlp = Math.max(3, Math.round((it.mlPx||6)*0.6)); ml = 'background:'+cs(it.mlHex)+';border:1px solid '+(cs(it.mlBorde)||'#ddd')+';padding:'+mlp+'px;'; }
+  const th = (it.thumb && /^data:image\//.test(String(it.thumb))) ? String(it.thumb).replace(/["'<>\s]/g,'') : '';
+  const inner = th ? '<img src="'+th+'" alt="" style="display:block;width:100%;height:100%;object-fit:cover">'
+                   : '<div style="width:100%;height:100%;background:#e9e9e9"></div>';
+  return '<div style="width:'+box+'px;height:'+box+'px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+    + '<div style="width:'+Math.round(fw)+'px;height:'+Math.round(fh)+'px;padding:'+fr+'px;background:'+grad+';box-shadow:0 2px 6px rgba(0,0,0,.25)">'
+    + '<div style="box-sizing:border-box;width:100%;height:100%;'+ml+'"><div style="width:100%;height:100%;overflow:hidden">'+inner+'</div></div></div></div>';
+}
+
+function telWA(t){ let d = String(t||'').replace(/\D/g,''); if(d.length > 10) d = d.slice(-10); return d.length === 10 ? '52'+d : ''; }
+function dinero(v){ return '$' + Number(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2}) + ' MXN'; }
+function mensajePago(p, n, suc){
+  const lineas = (p.items||[]).map((it,i)=>{
+    const q = it.cantidad||1;
+    if(it.tipo === 'espejo') return (i+1)+'. 🪞 Espejo '+(it.subtipo||'')+' — '+(it.tamano||'')+(it.moldura && it.moldura!=='Sin moldura' ? ', moldura '+it.moldura : '')+' (x'+q+')';
+    return (i+1)+'. 🖼️ Marco con foto — '+(it.tamano||'')+', moldura '+(it.moldura||'')+(it.ml ? ', María Luisa '+it.ml+(it.grosor?' ('+it.grosor+')':'') : '')+' (x'+q+')';
+  }).join('\n');
+  const entrega = /Boca/i.test(p.entrega||'') ? 'Sucursal Boca del Río' : (/C[óo]rdoba/i.test(p.entrega||'') ? 'Sucursal Córdoba' : suc);
+  let m = 'Hola '+n+', gracias por tu pedido en *Beverido Enmarca* 🙏\n\n'
+    + '📋 *Folio:* '+p.folio+'\n\n'
+    + '🛍️ *Tu pedido:*\n'+lineas+'\n\n'
+    + '📍 *Recoges en:* '+entrega+'\n'
+    + '💳 *Método de pago:* '+(p.metodo||'Por definir')+'\n';
+  if(p.total != null && !isNaN(p.total)) m += '💰 *Total a pagar:* '+dinero(p.total)+' (IVA incluido)\n';
+  m += '\n⏳ Para *confirmar tu pedido* necesitamos que nos envíes el *comprobante del pago total* por este medio.\n';
+  if(/transfer/i.test(p.metodo||'')){
+    m += '\n🏦 *Datos para transferencia:*\nBeneficiario: Gerardo Beverido Díaz Mirón\nCuenta CLABE: 021855040696588476\nBanco: HSBC\n';
+  }
+  m += '\n¡Gracias por tu preferencia! ✅';
+  return m;
+}
+function mensajeCliente(p, estado){
+  const n = (p.nombre||'').split(' ')[0] || 'cliente';
+  const suc = /Boca/i.test(p.entrega||'') ? 'Sucursal Boca del Río' : (/C[óo]rdoba/i.test(p.entrega||'') ? 'Sucursal Córdoba' : 'la sucursal elegida');
+  const base = {
+    confirmado: 'Hola '+n+', ¡gracias por tu compra en Beverido Enmarca! ✅ Confirmamos tu pedido *'+p.folio+'*. Ya comenzamos con su elaboración.',
+    en_elaboracion: 'Hola '+n+', tu pedido *'+p.folio+'* ya está en elaboración 🔨. Te avisamos en cuanto esté listo.',
+    listo: 'Hola '+n+', tu pedido *'+p.folio+'* ya está listo 📦. Puedes pasar a recogerlo a '+suc+'. ¡Te esperamos!',
+    entregado: 'Hola '+n+', gracias por tu preferencia 🙏. Tu pedido *'+p.folio+'* fue entregado. ¡Esperamos que lo disfrutes!',
+    pendiente: mensajePago(p, n, suc),
+    cancelado: 'Hola '+n+', tu pedido *'+p.folio+'* fue cancelado. Si tienes dudas, con gusto te ayudamos.'
+  };
+  return base[estado] || base.pendiente;
+}
+function linkWA(p, estado){
+  const t = telWA(p.tel); if(!t) return '';
+  return 'https://wa.me/'+t+'?text='+encodeURIComponent(mensajeCliente(p, estado));
+}
+
+function itemHTML(it){
+  const q = '<span class="qty">× '+(it.cantidad||1)+'</span>';
+  if(it.tipo === 'espejo'){
+    return '<div class="item"><div style="width:64px;height:64px;border-radius:10px;background:var(--verde-l);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0">🪞</div>'
+      + '<div><div class="t">Espejo '+esc(it.subtipo)+'</div><div class="s">📐 '+esc(it.tamano)+'<br>🪵 Moldura: '+esc(it.moldura||'Sin moldura')+'</div></div>'+q+'</div>';
+  }
+  const foto = it.fotoURL
+    ? '<br><a class="lnk" style="margin-top:6px" href="'+esc(it.fotoURL)+'" target="_blank" rel="noopener"><i class="ti ti-photo"></i> Ver / descargar foto original</a>'
+    : '<br><span style="color:#b36b00;font-weight:600">⚠️ Foto no disponible — pedirla al cliente</span>';
+  return '<div class="item">'+miniMarco(it,64)
+    + '<div><div class="t">Marco con foto</div><div class="s">📐 '+esc(it.tamano)
+    + (it.ml ? '<br>🎨 María Luisa: '+esc(it.ml)+(it.grosor?' ('+esc(it.grosor)+')':'') : '')
+    + '<br>🪵 Moldura: '+esc(it.moldura)+foto+'</div></div>'+q+'</div>';
+}
+
+function accionesHTML(p){
+  const e = p.estado || 'pendiente', sig = SIGUIENTE[e], f = esc(p.folio);
+  let h = '<div class="acc"><span class="lbl" style="font-size:11.5px;font-weight:700;color:var(--tx2)">Acciones</span><div class="row">';
+  if(sig) h += '<button class="b-ok" data-act="estado" data-folio="'+f+'" data-est="'+sig+'">'+TXT_BTN[sig]+'</button>';
+  const wa = linkWA(p, e);
+  if(wa) h += '<a class="lnk wa" target="_blank" rel="noopener" href="'+wa+'"><i class="ti ti-brand-whatsapp"></i> '+(e === 'pendiente' ? 'Pedir comprobante por WhatsApp' : 'Avisar al cliente')+'</a>';
+  if(e !== 'pendiente' && e !== 'cancelado') h += '<button class="b-ot" data-act="estado" data-folio="'+f+'" data-est="pendiente">↩︎ Regresar a pendiente</button>';
+  if(e !== 'cancelado' && e !== 'entregado') h += '<button class="b-no" data-act="estado" data-folio="'+f+'" data-est="cancelado">Cancelar</button>';
+  if(e === 'cancelado') h += '<button class="b-ot" data-act="estado" data-folio="'+f+'" data-est="pendiente">Reactivar</button>';
+  return h + '</div></div>';
+}
+
+function cardHTML(p){
+  const e = p.estado || 'pendiente', st = ESTADOS[e] || ESTADOS.pendiente;
+  const fecha = p.ts ? new Date(p.ts).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+  const tel = String(p.tel||'').replace(/[^\d+ ]/g,'');
+  return '<div class="card'+(e==='pendiente'?' nuevo':'')+'">'
+    + '<div class="ch"><div><div class="folio">'+esc(p.folio)+'</div><div class="fecha">'+esc(fecha)+'</div></div>'
+    + '<span class="badge" style="background:'+st.bg+';color:'+st.color+'">'+st.txt+'</span></div>'
+    + '<div class="sec-b"><span class="lbl">Cliente</span><strong>'+esc(p.nombre)+'</strong><br>'
+    + '<div class="row" style="margin-top:6px">'
+    + (tel ? '<a class="lnk" href="tel:'+esc(tel)+'"><i class="ti ti-phone"></i> '+esc(p.tel)+'</a>' : '')
+    + (p.email ? '<a class="lnk" href="mailto:'+esc(p.email)+'"><i class="ti ti-mail"></i> '+esc(p.email)+'</a>' : '')
+    + '</div></div>'
+    + '<div class="sec-b"><span class="lbl">Productos</span>'+(p.items||[]).map(itemHTML).join('')+'</div>'
+    + '<div class="sec-b"><span class="lbl">Entrega</span>'+esc(p.entrega).replace(/\n/g,'<br>')+'</div>'
+    + '<div class="sec-b"><span class="lbl">Método de pago</span>'+esc(p.metodo||'Sin especificar')
+    + (/transfer/i.test(p.metodo||'') ? '<br><span style="color:#b36b00;font-size:12.5px">Confirma solo cuando verifiques el comprobante del pago completo.</span>' : '')+'</div>'
+    + accionesHTML(p) + '</div>';
+}
+
+function conteos(){
+  const c = {todos:pedidos.length}; Object.keys(ESTADOS).forEach(k=>c[k]=0);
+  pedidos.forEach(p=>{ c[p.estado||'pendiente']++; });
+  return c;
+}
+
+function pintarLista(){
+  const c = conteos();
+  const chips = [['pendiente','Pendientes'],['confirmado','Confirmados'],['en_elaboracion','En elaboración'],['listo','Listos'],['entregado','Entregados'],['cancelado','Cancelados'],['todos','Todos']]
+    .map(([k,t])=>'<button class="chip'+(filtro===k?' on':'')+'" data-act="filtro" data-v="'+k+'">'+t+'<b>'+(c[k]||0)+'</b></button>').join('');
+  const q = busqueda.trim().toLowerCase();
+  const lista = pedidos.filter(p=>{
+    if(filtro !== 'todos' && (p.estado||'pendiente') !== filtro) return false;
+    if(sucursal && !new RegExp(sucursal,'i').test(p.entrega||'')) return false;
+    if(q && !((p.folio||'')+' '+(p.nombre||'')+' '+(p.tel||'')+' '+(p.email||'')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  document.getElementById('filtros').innerHTML = chips;
+  document.getElementById('lista').innerHTML = lista.length ? lista.map(cardHTML).join('')
+    : '<div class="vacio">No hay pedidos en esta vista.</div>';
+  document.title = (c.pendiente ? '('+c.pendiente+') ' : '') + 'Panel de pedidos · Beverido Enmarca';
+}
+
+function pintarPanel(user){
+  app$.innerHTML = '<div class="top"><h1>Panel de pedidos<small>'+esc(user.email)+'</small></h1><button data-act="salir">Salir</button></div>'
+    + '<div class="wrap">'
+    + (errorMsg ? '<div class="err">'+errorMsg+'</div>' : '')
+    + '<div class="filtros" id="filtros"></div>'
+    + '<div class="barra"><input id="q" type="search" placeholder="Buscar por folio, nombre o teléfono" value="'+esc(busqueda)+'">'
+    + '<select id="suc"><option value="">Todas las sucursales</option><option value="C[óo]rdoba">Córdoba</option><option value="Boca">Boca del Río</option></select></div>'
+    + '<div id="lista"></div></div>';
+  document.getElementById('suc').value = sucursal;
+  pintarLista();
+}
+
+function pintarLogin(msg){
+  app$.innerHTML = '<div class="centro"><h2>Panel de pedidos</h2><p>'+(msg || 'Acceso exclusivo para el administrador de Beverido Enmarca.')+'</p>'
+    + '<button class="btn" data-act="entrar"><i class="ti ti-brand-google"></i>&nbsp; Entrar con Google</button></div>';
+}
+
+function escuchar(user){
+  if(unsub) unsub();
+  errorMsg = '';
+  unsub = onSnapshot(collection(db,'pedidos'), snap => {
+    const arr = []; snap.forEach(d => arr.push(d.data()));
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    // Aviso de pedidos nuevos mientras el panel está abierto
+    if(vistos){ arr.forEach(p=>{ if(!vistos.has(p.folio)) toast('🛎️ Nuevo pedido de '+(p.nombre||'cliente')+' ('+p.folio+')'); }); }
+    vistos = new Set(arr.map(p=>p.folio));
+    pedidos = arr; errorMsg = '';
+    if(!document.getElementById('lista')) pintarPanel(user); else { document.querySelector('.err') && document.querySelector('.err').remove(); pintarLista(); }
+  }, err => {
+    errorMsg = '<strong>No se pudieron leer los pedidos.</strong> Revisa que las reglas de Firestore incluyan tu correo como administrador. (Código: '+esc(err.code||err.message)+')';
+    pintarPanel(user);
+  });
+}
+
+onAuthStateChanged(auth, user => {
+  if(unsub){ unsub(); unsub = null; }
+  vistos = null; pedidos = [];
+  if(!user) return pintarLogin();
+  if(!esAdmin(user)){
+    pintarLogin('La cuenta <strong>'+esc(user.email||'')+'</strong> no tiene permiso para entrar a este panel.');
+    signOut(auth);
+    return;
+  }
+  pintarPanel(user); escuchar(user);
+});
+
+async function cambiarEstado(folio, est){
+  const p = pedidos.find(x=>x.folio===folio); if(!p) return;
+  if(est === 'cancelado' && !confirm('¿Cancelar el pedido '+folio+'?')) return;
+  if(est === 'confirmado' && /transfer/i.test(p.metodo||'') && !confirm('¿Ya verificaste el comprobante del pago completo de '+folio+'?')) return;
+  try{
+    await updateDoc(doc(db,'pedidos',folio), {estado:est, estadoTs:Date.now(), estadoPor:auth.currentUser.email});
+    toast('Pedido '+folio+' → '+(ESTADOS[est]||{}).txt);
+  }catch(e){ toast('No se pudo actualizar: '+(e.code||e.message)); }
+}
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  const a = b.dataset.act;
+  if(a === 'entrar') signInWithPopup(auth, new GoogleAuthProvider()).catch(e=>toast('No se pudo iniciar sesión: '+(e.code||e.message)));
+  else if(a === 'salir') signOut(auth);
+  else if(a === 'filtro'){ filtro = b.dataset.v; pintarLista(); }
+  else if(a === 'estado') cambiarEstado(b.dataset.folio, b.dataset.est);
+});
+document.addEventListener('input', ev => { if(ev.target.id === 'q'){ busqueda = ev.target.value; pintarLista(); } });
+document.addEventListener('change', ev => { if(ev.target.id === 'suc'){ sucursal = ev.target.value; pintarLista(); } });
+</script>
+</body>
+</html>
